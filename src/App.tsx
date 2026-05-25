@@ -1,0 +1,71 @@
+import ChartStage from './components/ChartStage'
+import TopBar from './components/TopBar'
+import { useTradingChartController } from './hooks/useTradingChartController'
+import './App.css'
+
+function App() {
+  const {
+    chartCanvasRef,
+    yAxisCanvasRef,
+    xAxisCanvasRef,
+    chartStageRef,
+    currentTF,
+    jumpDate,
+    drawMode,
+    objectsOpen,
+    drawMenu,
+    drawings,
+    ohlc,
+    changeTimeframe,
+    jumpToDate,
+    setJumpDate,
+    toggleDrawMode,
+    setObjectsOpen,
+    loadCsvFiles,
+    removeDrawing,
+    createDrawing,
+    handleChartMouseDown,
+    handleChartWheel,
+    handleChartMouseLeave,
+    handleYAxisMouseDown,
+    handleYAxisDoubleClick,
+  } = useTradingChartController()
+
+  return (
+    <div className="app-shell">
+      <TopBar
+        currentTF={currentTF}
+        jumpDate={jumpDate}
+        drawMode={drawMode}
+        objectsOpen={objectsOpen}
+        onTimeframeChange={changeTimeframe}
+        onJumpDateChange={setJumpDate}
+        onJumpToDate={() => jumpToDate(jumpDate)}
+        onToggleDrawMode={toggleDrawMode}
+        onToggleObjects={() => setObjectsOpen((value) => !value)}
+        onLoadCsvFiles={loadCsvFiles}
+      />
+
+      <ChartStage
+        chartCanvasRef={chartCanvasRef}
+        yAxisCanvasRef={yAxisCanvasRef}
+        xAxisCanvasRef={xAxisCanvasRef}
+        chartStageRef={chartStageRef}
+        drawMenu={drawMenu}
+        objectsOpen={objectsOpen}
+        drawings={drawings}
+        ohlc={ohlc}
+        onChartMouseDown={handleChartMouseDown}
+        onChartWheel={handleChartWheel}
+        onChartMouseLeave={handleChartMouseLeave}
+        onYAxisMouseDown={handleYAxisMouseDown}
+        onYAxisDoubleClick={handleYAxisDoubleClick}
+        onCreateDrawing={createDrawing}
+        onRemoveDrawing={removeDrawing}
+        onCloseObjects={() => setObjectsOpen(false)}
+      />
+    </div>
+  )
+}
+
+export default App
