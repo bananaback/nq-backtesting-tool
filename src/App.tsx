@@ -12,6 +12,7 @@ function App() {
     currentTF,
     jumpDate,
     drawMode,
+    showDaySeparators,
     objectsOpen,
     drawMenu,
     drawings,
@@ -20,6 +21,7 @@ function App() {
     jumpToDate,
     setJumpDate,
     toggleDrawMode,
+    toggleDaySeparators,
     setObjectsOpen,
     loadCsvFiles,
     removeDrawing,
@@ -37,11 +39,13 @@ function App() {
         currentTF={currentTF}
         jumpDate={jumpDate}
         drawMode={drawMode}
+        showDaySeparators={showDaySeparators}
         objectsOpen={objectsOpen}
         onTimeframeChange={changeTimeframe}
         onJumpDateChange={setJumpDate}
         onJumpToDate={() => jumpToDate(jumpDate)}
         onToggleDrawMode={toggleDrawMode}
+        onToggleDaySeparators={toggleDaySeparators}
         onToggleObjects={() => setObjectsOpen((value) => !value)}
         onLoadCsvFiles={loadCsvFiles}
       />

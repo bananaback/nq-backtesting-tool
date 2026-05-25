@@ -15,6 +15,7 @@ export function useTradingChartController() {
     const runtimeRef = useRef<ChartRuntimeState>({
         chartData: createEmptyChartData(),
         sourceFiles: {},
+        showDaySeparators: true,
         drawings: [],
         drawingIdCounter: 1,
         viewStart: 0,
@@ -37,10 +38,12 @@ export function useTradingChartController() {
     const currentTfRef = useRef<Timeframe>('m1')
     const drawModeRef = useRef(false)
     const drawMenuOpenRef = useRef(false)
+    const showDaySeparatorsRef = useRef(true)
 
     const [currentTF, setCurrentTF] = useState<Timeframe>('m1')
     const [jumpDate, setJumpDate] = useState('')
     const [drawMode, setDrawMode] = useState(false)
+    const [showDaySeparators, setShowDaySeparators] = useState(true)
     const [objectsOpen, setObjectsOpen] = useState(false)
     const [drawMenu, setDrawMenu] = useState<DrawMenuState>(null)
     const [drawings, setDrawings] = useState<Drawing[]>([])
@@ -77,6 +80,7 @@ export function useTradingChartController() {
         changeTimeframe,
         jumpToDate,
         toggleDrawMode,
+        toggleDaySeparators,
         loadCsvFiles,
         removeDrawing,
         createDrawing,
@@ -90,10 +94,12 @@ export function useTradingChartController() {
         runtimeRef,
         currentTfRef,
         drawModeRef,
+        showDaySeparatorsRef,
         drawMenuOpenRef,
         setCurrentTF,
         setJumpDate,
         setDrawMode,
+        setShowDaySeparators,
         setDrawMenu,
         setDrawings,
         drawCanvas,
@@ -107,6 +113,12 @@ export function useTradingChartController() {
     useEffect(() => {
         drawModeRef.current = drawMode
     }, [drawMode])
+
+    useEffect(() => {
+        showDaySeparatorsRef.current = showDaySeparators
+        runtimeRef.current.showDaySeparators = showDaySeparators
+        drawCanvas()
+    }, [showDaySeparators])
 
     useEffect(() => {
         drawMenuOpenRef.current = drawMenu !== null
@@ -137,6 +149,7 @@ export function useTradingChartController() {
         currentTF,
         jumpDate,
         drawMode,
+        showDaySeparators,
         objectsOpen,
         drawMenu,
         drawings,
@@ -145,6 +158,7 @@ export function useTradingChartController() {
         jumpToDate,
         setJumpDate,
         toggleDrawMode,
+        toggleDaySeparators,
         setObjectsOpen,
         loadCsvFiles,
         removeDrawing,

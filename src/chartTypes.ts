@@ -1,6 +1,6 @@
 export type Timeframe = 'm1' | 'm5' | 'm15' | 'h1'
 
-export type ToolType = 'FVG' | 'OB' | 'EQH' | 'EQL' | 'SH' | 'SL'
+export type ToolType = 'FVG' | 'OB' | 'EQH' | 'EQL' | 'SH' | 'SL' | 'ORG'
 
 export type Candle = {
     time: string
@@ -20,17 +20,27 @@ export type FvgDrawing = {
     border: string
 }
 
+export type OrgDrawing = {
+    id: number
+    type: 'ORG'
+    time: string
+    top: number
+    bot: number
+    price1614: number
+    price0930: number
+}
+
 export type LineDrawing = {
     id: number
-    type: Exclude<ToolType, 'FVG'>
+    type: Exclude<ToolType, 'FVG' | 'ORG'>
     time: string
     price: number
     color: string
 }
 
-export type Drawing = FvgDrawing | LineDrawing
+export type Drawing = FvgDrawing | LineDrawing | OrgDrawing
 
-export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'>
+export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'>
 
 export type DrawMenuState =
     | {
@@ -53,7 +63,7 @@ export type OhlcState =
 
 export const TIMEFRAMES: Timeframe[] = ['m1', 'm5', 'm15', 'h1']
 
-export const DRAW_TOOL_OPTIONS: ToolType[] = ['FVG', 'OB', 'EQH', 'EQL', 'SH', 'SL']
+export const DRAW_TOOL_OPTIONS: ToolType[] = ['FVG', 'OB', 'EQH', 'EQL', 'SH', 'SL', 'ORG']
 
 export function createEmptyChartData(): Record<Timeframe, Candle[]> {
     return {
@@ -67,6 +77,7 @@ export function createEmptyChartData(): Record<Timeframe, Candle[]> {
 export type ChartRuntimeState = {
     chartData: Record<Timeframe, Candle[]>
     sourceFiles: Partial<Record<Timeframe, File>>
+    showDaySeparators: boolean
     drawings: Drawing[]
     drawingIdCounter: number
     viewStart: number

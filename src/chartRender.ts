@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { ChartRuntimeState, OhlcState, Timeframe } from './chartTypes'
-import { getIndexByTime } from './chartUtils'
+import { getIndexByTime, isMidnightCandle } from './chartUtils'
 import { drawCrosshairOverlay } from './chartCrosshair'
 
 type DrawTradingChartArgs = {
@@ -22,13 +22,14 @@ export function drawTradingChart({
     drawMenuOpen,
     setOhlc,
 }: DrawTradingChartArgs) {
-    const ctx = chartCanvas.getContext('2d')
+    const ctx = chartCanvas.getContext('2d', { alpha: false })
     const yCtx = yAxisCanvas.getContext('2d')
     const xCtx = xAxisCanvas.getContext('2d')
     if (!ctx || !yCtx || !xCtx) return
 
     const data = runtime.chartData[currentTF]
-    ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, chartCanvas.width, chartCanvas.height)
     yCtx.clearRect(0, 0, yAxisCanvas.width, yAxisCanvas.height)
     xCtx.clearRect(0, 0, xAxisCanvas.width, xAxisCanvas.height)
 
@@ -64,6 +65,35 @@ export function drawTradingChart({
     const candleWidth = Math.max(1, candleSpace * 0.7)
     const getY = (price: number) => chartCanvas.height - ((price - runtime.manualMinP) / priceRange) * chartCanvas.height
 
+    if (runtime.showDaySeparators) {
+        for (let i = Math.max(startIdx, 1); i <= endIdx; i += 1) {
+            if (!isMidnightCandle(data[i].time)) continue
+
+            const x = (i - runtime.viewStart) * candleSpace + candleSpace / 2
+            const xLine = Math.floor(x) + 0.5
+
+            ctx.save()
+            ctx.setLineDash([2, 4])
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)'
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            ctx.moveTo(xLine, 0)
+            ctx.lineTo(xLine, chartCanvas.height)
+            ctx.stroke()
+            ctx.restore()
+
+            xCtx.save()
+            xCtx.setLineDash([2, 4])
+            xCtx.strokeStyle = 'rgba(0, 0, 0, 0.22)'
+            xCtx.lineWidth = 1
+            xCtx.beginPath()
+            xCtx.moveTo(xLine, 0)
+            xCtx.lineTo(xLine, xAxisCanvas.height)
+            xCtx.stroke()
+            xCtx.restore()
+        }
+    }
+
     runtime.drawings.forEach((tool) => {
         const index = getIndexByTime(data, tool.time)
         if (index === -1) return
@@ -81,6 +111,49 @@ export function drawTradingChart({
             ctx.strokeStyle = tool.border
             ctx.lineWidth = 1
             ctx.strokeRect(x, yDraw, chartCanvas.width - x, height)
+            return
+        }
+
+        if (tool.type === 'ORG') {
+            const yTop = getY(tool.top)
+            const yBot = getY(tool.bot)
+            const height = Math.abs(yBot - yTop)
+            const yDraw = Math.min(yTop, yBot)
+            const isPremium = tool.price0930 > tool.price1614
+
+            ctx.save()
+            if (isPremium) {
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.12)'
+                ctx.strokeStyle = 'rgba(34, 197, 94, 0.4)'
+            } else {
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.12)'
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)'
+            }
+
+            ctx.setLineDash([2, 2])
+            const rectWidth = chartCanvas.width - x
+            ctx.fillRect(x, yDraw, rectWidth, height)
+            ctx.strokeRect(x, yDraw, rectWidth, height)
+
+            ctx.setLineDash([4, 4])
+            ctx.lineWidth = 0.5
+            const levels = [0.25, 0.5, 0.75]
+            levels.forEach(lvl => {
+                const yLvl = getY(tool.price1614 + (tool.price0930 - tool.price1614) * lvl)
+                ctx.beginPath()
+                ctx.moveTo(x, yLvl)
+                ctx.lineTo(chartCanvas.width, yLvl)
+                ctx.stroke()
+
+                ctx.fillStyle = isPremium ? '#15803d' : '#b91c1c'
+                ctx.font = '8px sans-serif'
+                ctx.fillText(lvl.toString(), chartCanvas.width - 25, yLvl - 2)
+            })
+
+            ctx.fillStyle = isPremium ? '#15803d' : '#b91c1c'
+            ctx.font = 'bold 10px sans-serif'
+            ctx.fillText(`ORG (${isPremium ? 'Premium' : 'Discount'})`, x + 8, yDraw + 14)
+            ctx.restore()
             return
         }
 

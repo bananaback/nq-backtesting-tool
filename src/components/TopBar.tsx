@@ -5,11 +5,13 @@ type TopBarProps = {
     currentTF: Timeframe
     jumpDate: string
     drawMode: boolean
+    showDaySeparators: boolean
     objectsOpen: boolean
     onTimeframeChange: (nextTF: Timeframe) => void
     onJumpDateChange: (value: string) => void
     onJumpToDate: () => void
     onToggleDrawMode: () => void
+    onToggleDaySeparators: () => void
     onToggleObjects: () => void
     onLoadCsvFiles: (files: FileList | null) => void
 }
@@ -25,11 +27,13 @@ function TopBar({
     currentTF,
     jumpDate,
     drawMode,
+    showDaySeparators,
     objectsOpen,
     onTimeframeChange,
     onJumpDateChange,
     onJumpToDate,
     onToggleDrawMode,
+    onToggleDaySeparators,
     onToggleObjects,
     onLoadCsvFiles,
 }: TopBarProps) {
@@ -57,6 +61,9 @@ function TopBar({
                 <div className="toolbar-buttons">
                     <button type="button" className={drawMode ? 'action-btn is-on' : 'action-btn'} onClick={onToggleDrawMode}>
                         {drawMode ? '✏️ Draw: ON' : '✏️ Draw: OFF'}
+                    </button>
+                    <button type="button" className={showDaySeparators ? 'action-btn is-on' : 'action-btn'} onClick={onToggleDaySeparators}>
+                        {showDaySeparators ? '⋮ Day Lines: ON' : '⋮ Day Lines: OFF'}
                     </button>
                     <button type="button" className="action-btn" onClick={onToggleObjects}>
                         {objectsOpen ? '📋 Objects: OPEN' : '📋 Objects'}

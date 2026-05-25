@@ -37,7 +37,9 @@ export function drawCrosshairOverlay({
 
     const snappedX = Math.max(0.5, Math.min(chartCanvas.width - 0.5, Math.round(runtime.crosshairX) + 0.5))
     const snappedY = Math.max(0.5, Math.min(chartCanvas.height - 0.5, Math.round(runtime.crosshairY) + 0.5))
-    const hoverIndex = Math.floor(snappedX / candleSpace)
+    const startIdx = Math.floor(Math.max(0, runtime.viewStart))
+    const hoverDataIndex = Math.round((snappedX - candleSpace / 2) / candleSpace + runtime.viewStart)
+    const hoverIndex = hoverDataIndex - startIdx
 
     if (hoverIndex < 0 || hoverIndex >= visibleData.length) {
         setOhlc({ visible: false })
@@ -45,11 +47,12 @@ export function drawCrosshairOverlay({
     }
 
     const candle = visibleData[hoverIndex]
+    const candleCenterX = Math.max(0.5, Math.min(chartCanvas.width - 0.5, (hoverDataIndex - runtime.viewStart) * candleSpace + candleSpace / 2))
     ctx.beginPath()
     ctx.setLineDash([4, 4])
     ctx.strokeStyle = '#9ca3af'
-    ctx.moveTo(snappedX, 0)
-    ctx.lineTo(snappedX, chartCanvas.height)
+    ctx.moveTo(candleCenterX, 0)
+    ctx.lineTo(candleCenterX, chartCanvas.height)
     ctx.moveTo(0, snappedY)
     ctx.lineTo(chartCanvas.width, snappedY)
     ctx.stroke()
@@ -64,9 +67,9 @@ export function drawCrosshairOverlay({
     const timeStr = formatAxisTime(candle.time)
     const textWidth = xCtx.measureText(timeStr).width
     xCtx.fillStyle = '#1f2937'
-    xCtx.fillRect(snappedX - textWidth / 2 - 8, 0, textWidth + 16, xAxisCanvas.height)
+    xCtx.fillRect(candleCenterX - textWidth / 2 - 8, 0, textWidth + 16, xAxisCanvas.height)
     xCtx.fillStyle = '#ffffff'
-    xCtx.fillText(timeStr, snappedX, xAxisCanvas.height / 2)
+    xCtx.fillText(timeStr, candleCenterX, xAxisCanvas.height / 2)
 
     setOhlc({
         visible: true,

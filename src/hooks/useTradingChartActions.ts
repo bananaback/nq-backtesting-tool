@@ -8,10 +8,12 @@ type TradingChartActionsDeps = {
     runtimeRef: RefObject<ChartRuntimeState>
     currentTfRef: RefObject<Timeframe>
     drawModeRef: RefObject<boolean>
+    showDaySeparatorsRef: RefObject<boolean>
     drawMenuOpenRef: RefObject<boolean>
     setCurrentTF: Dispatch<SetStateAction<Timeframe>>
     setJumpDate: Dispatch<SetStateAction<string>>
     setDrawMode: Dispatch<SetStateAction<boolean>>
+    setShowDaySeparators: Dispatch<SetStateAction<boolean>>
     setDrawMenu: Dispatch<SetStateAction<DrawMenuState>>
     setDrawings: Dispatch<SetStateAction<Drawing[]>>
     drawCanvas: () => void
@@ -22,10 +24,12 @@ export function createTradingChartActions({
     runtimeRef,
     currentTfRef,
     drawModeRef,
+    showDaySeparatorsRef,
     drawMenuOpenRef,
     setCurrentTF,
     setJumpDate,
     setDrawMode,
+    setShowDaySeparators,
     setDrawMenu,
     setDrawings,
     drawCanvas,
@@ -146,6 +150,14 @@ export function createTradingChartActions({
         drawCanvas()
     }
 
+    const toggleDaySeparators = () => {
+        const next = !showDaySeparatorsRef.current
+        showDaySeparatorsRef.current = next
+        runtimeRef.current.showDaySeparators = next
+        setShowDaySeparators(next)
+        drawCanvas()
+    }
+
     const removeDrawing = (id: number) => {
         const nextDrawings = runtimeRef.current.drawings.filter((item) => item.id !== id)
         runtimeRef.current.drawings = nextDrawings
@@ -185,6 +197,47 @@ export function createTradingChartActions({
             newDrawing = { type, time: candle.time, price: candle.high, color: '#ef4444' }
         } else if (type === 'EQL' || type === 'SL') {
             newDrawing = { type, time: candle.time, price: candle.low, color: '#22c55e' }
+        } else if (type === 'ORG') {
+            const m1Data = runtime.chartData.m1
+            if (!m1Data || m1Data.length === 0) {
+                window.alert('Load M1 data first to calculate precise ORG.')
+            } else {
+                const targetDay = candle.time.slice(0, 10)
+                let target0930Open = -1
+                let target0930IdxM1 = -1
+                for (let j = 0; j < m1Data.length; j++) {
+                    if (m1Data[j].time.startsWith(targetDay) && m1Data[j].time.includes('09:30')) {
+                        target0930Open = m1Data[j].open
+                        target0930IdxM1 = j
+                        break
+                    }
+                }
+
+                if (target0930IdxM1 === -1) {
+                    window.alert(`No 09:30 candle found for ${targetDay}.`)
+                } else {
+                    let prev1614Close = -1
+                    for (let j = target0930IdxM1 - 1; j >= 0; j--) {
+                        if (m1Data[j].time.includes('16:14')) {
+                            prev1614Close = m1Data[j].close
+                            break
+                        }
+                    }
+
+                    if (prev1614Close === -1) {
+                        window.alert('No previous 16:14 candle found.')
+                    } else {
+                        newDrawing = {
+                            type: 'ORG',
+                            time: targetDay + ' 09:30',
+                            top: Math.max(prev1614Close, target0930Open),
+                            bot: Math.min(prev1614Close, target0930Open),
+                            price1614: prev1614Close,
+                            price0930: target0930Open,
+                        }
+                    }
+                }
+            }
         }
 
         if (newDrawing) {
@@ -205,6 +258,7 @@ export function createTradingChartActions({
         changeTimeframe,
         jumpToDate,
         toggleDrawMode,
+        toggleDaySeparators,
         loadCsvFiles,
         removeDrawing,
         createDrawing,

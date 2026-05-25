@@ -52,6 +52,11 @@ export function getFirstIndexByDate(data: Candle[], dateStr: string) {
     return data.findIndex((candle) => candle.time.slice(0, 10) === dateStr)
 }
 
+export function isMidnightCandle(time: string) {
+    const timePart = time.includes(' ') ? time.split(' ')[1] : time.includes('T') ? time.split('T')[1] : time
+    return timePart.startsWith('00:00')
+}
+
 export function formatObjectTime(time: string) {
     return time.includes(' ') ? time.split(' ')[1] : time
 }
@@ -66,5 +71,6 @@ export function getToolLabel(tool: ToolType) {
     if (tool === 'EQH') return 'Equal Highs'
     if (tool === 'EQL') return 'Equal Lows'
     if (tool === 'SH') return 'Single High'
-    return 'Single Low'
+    if (tool === 'SL') return 'Single Low'
+    return 'Opening Range Gap'
 }
