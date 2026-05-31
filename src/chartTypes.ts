@@ -1,6 +1,19 @@
 export type Timeframe = 'm1' | 'm5' | 'm15' | 'h1'
 
-export type ToolType = 'FVG' | 'OB' | 'EQH' | 'EQL' | 'SH' | 'SL' | 'ORG'
+export type ToolType =
+    | 'FVG'
+    | 'FVG_FIRST'
+    | 'VLINE'
+    | 'OB'
+    | 'EQH'
+    | 'EQL'
+    | 'SH'
+    | 'SL'
+    | 'ORG'
+    | 'NDOG'
+    | 'NWOG'
+    | 'ORG_RECENT_5'
+    | 'GAP_RECENT_5'
 
 export type Candle = {
     time: string
@@ -16,31 +29,43 @@ export type FvgDrawing = {
     time: string
     top: number
     bot: number
+    lengthMinutes?: number | null
     color: string
     border: string
 }
 
+export type VerticalLineDrawing = {
+    id: number
+    type: 'VLINE'
+    time: string
+    color: string
+}
+
 export type OrgDrawing = {
     id: number
-    type: 'ORG'
+    type: 'ORG' | 'NDOG' | 'NWOG'
     time: string
     top: number
     bot: number
     price1614: number
     price0930: number
+    lengthMinutes?: number | null
+    fillColor?: string
+    borderColor?: string
 }
 
 export type LineDrawing = {
     id: number
-    type: Exclude<ToolType, 'FVG' | 'ORG'>
+    type: Exclude<ToolType, 'FVG' | 'ORG' | 'NDOG' | 'NWOG' | 'VLINE' | 'FVG_FIRST' | 'ORG_RECENT_5' | 'GAP_RECENT_5'>
     time: string
     price: number
+    lengthMinutes?: number | null
     color: string
 }
 
-export type Drawing = FvgDrawing | LineDrawing | OrgDrawing
+export type Drawing = FvgDrawing | LineDrawing | OrgDrawing | VerticalLineDrawing
 
-export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'>
+export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'>
 
 export type DrawMenuState =
     | {
@@ -63,7 +88,21 @@ export type OhlcState =
 
 export const TIMEFRAMES: Timeframe[] = ['m1', 'm5', 'm15', 'h1']
 
-export const DRAW_TOOL_OPTIONS: ToolType[] = ['FVG', 'OB', 'EQH', 'EQL', 'SH', 'SL', 'ORG']
+export const DRAW_TOOL_OPTIONS: ToolType[] = [
+    'FVG',
+    'FVG_FIRST',
+    'VLINE',
+    'OB',
+    'EQH',
+    'EQL',
+    'SH',
+    'SL',
+    'ORG',
+    'NDOG',
+    'NWOG',
+    'ORG_RECENT_5',
+    'GAP_RECENT_5',
+]
 
 export function createEmptyChartData(): Record<Timeframe, Candle[]> {
     return {
@@ -89,6 +128,7 @@ export type ChartRuntimeState = {
     crosshairX: number
     crosshairY: number
     selectedCandleIndex: number | null
+    selectedDrawingId: number | null
     mouseDownX: number
     mouseDownY: number
     isDraggingChart: boolean

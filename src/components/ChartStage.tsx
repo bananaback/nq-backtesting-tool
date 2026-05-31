@@ -1,5 +1,6 @@
 import type { MouseEvent, RefObject, WheelEvent } from 'react'
 import DrawMenu from './DrawMenu'
+import DrawingLengthModal from './DrawingLengthModal.tsx'
 import ObjectsPanel from './ObjectsPanel'
 import OhlcBox from './OhlcBox'
 import type { Drawing, DrawMenuState, OhlcState, ToolType } from '../chartTypes'
@@ -21,6 +22,12 @@ type ChartStageProps = {
     onCreateDrawing: (type: ToolType) => void
     onRemoveDrawing: (id: number) => void
     onCloseObjects: () => void
+    selectedDrawingId?: number | null
+    onSelectDrawing?: (id: number | null) => void
+    lengthEditorDrawing?: Drawing | null
+    onEditDrawing?: (drawing: Drawing) => void
+    onCloseLengthEditor?: () => void
+    onSaveDrawingLength?: (drawingId: number, lengthMinutes: number | null) => void
 }
 
 function ChartStage({
@@ -40,6 +47,12 @@ function ChartStage({
     onCreateDrawing,
     onRemoveDrawing,
     onCloseObjects,
+    selectedDrawingId,
+    onSelectDrawing,
+    lengthEditorDrawing,
+    onEditDrawing,
+    onCloseLengthEditor,
+    onSaveDrawingLength,
 }: ChartStageProps) {
     return (
         <main className="workspace">
@@ -63,8 +76,15 @@ function ChartStage({
                     />
 
                     {drawMenu ? <DrawMenu position={drawMenu} onCreateDrawing={onCreateDrawing} /> : null}
-                    {objectsOpen ? <ObjectsPanel drawings={drawings} onRemove={onRemoveDrawing} onClose={onCloseObjects} /> : null}
+                    {objectsOpen ? <ObjectsPanel drawings={drawings} onRemove={onRemoveDrawing} onClose={onCloseObjects} selectedDrawingId={selectedDrawingId} onSelect={onSelectDrawing} onEditDrawing={onEditDrawing} /> : null}
                     <OhlcBox ohlc={ohlc} />
+                    {lengthEditorDrawing && onCloseLengthEditor && onSaveDrawingLength ? (
+                        <DrawingLengthModal
+                            drawing={lengthEditorDrawing}
+                            onClose={onCloseLengthEditor}
+                            onSave={onSaveDrawingLength}
+                        />
+                    ) : null}
                 </div>
 
                 <div className="x-axis-row">

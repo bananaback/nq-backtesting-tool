@@ -27,6 +27,7 @@ export function useTradingChartController() {
         crosshairX: 0,
         crosshairY: 0,
         selectedCandleIndex: null,
+        selectedDrawingId: null,
         mouseDownX: 0,
         mouseDownY: 0,
         isDraggingChart: false,
@@ -47,6 +48,8 @@ export function useTradingChartController() {
     const [objectsOpen, setObjectsOpen] = useState(false)
     const [drawMenu, setDrawMenu] = useState<DrawMenuState>(null)
     const [drawings, setDrawings] = useState<Drawing[]>([])
+    const [selectedDrawingId, setSelectedDrawingId] = useState<number | null>(null)
+    const [lengthEditorDrawingId, setLengthEditorDrawingId] = useState<number | null>(null)
     const [ohlc, setOhlc] = useState<OhlcState>({ visible: false })
 
     const drawCanvas = () => {
@@ -102,6 +105,7 @@ export function useTradingChartController() {
         setShowDaySeparators,
         setDrawMenu,
         setDrawings,
+        setSelectedDrawingId,
         drawCanvas,
     })
 
@@ -130,6 +134,25 @@ export function useTradingChartController() {
         drawCanvas()
     }, [drawings, objectsOpen])
 
+    useEffect(() => {
+        runtimeRef.current.selectedDrawingId = selectedDrawingId
+        drawCanvas()
+    }, [selectedDrawingId])
+
+    const updateDrawingLengthMinutes = (drawingId: number, lengthMinutes: number | null) => {
+        const nextDrawings = runtimeRef.current.drawings.map((drawing) => {
+            if (drawing.id !== drawingId) return drawing
+            if (drawing.type !== 'VLINE') {
+                return { ...drawing, lengthMinutes }
+            }
+            return drawing
+        })
+
+        runtimeRef.current.drawings = nextDrawings
+        setDrawings(nextDrawings)
+        drawCanvas()
+    }
+
     useEffect(() => bindTradingChartWindowEvents({
         chartCanvasRef,
         runtimeRef,
@@ -139,6 +162,8 @@ export function useTradingChartController() {
         setDrawMenu,
         drawCanvas,
         resizeCanvas,
+        setSelectedDrawingId,
+        removeDrawing,
     }), [])
 
     return {
@@ -168,5 +193,10 @@ export function useTradingChartController() {
         handleChartMouseLeave,
         handleYAxisMouseDown,
         handleYAxisDoubleClick,
+        selectedDrawingId,
+        setSelectedDrawingId,
+        lengthEditorDrawingId,
+        setLengthEditorDrawingId,
+        updateDrawingLengthMinutes,
     }
 }

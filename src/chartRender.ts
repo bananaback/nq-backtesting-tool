@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { ChartRuntimeState, OhlcState, Timeframe } from './chartTypes'
-import { getIndexByTime, isMidnightCandle } from './chartUtils'
+import { getDrawingLengthMinutes, getIndexByTime, getTimeframeMinutes, isMidnightCandle } from './chartUtils'
 import { drawCrosshairOverlay } from './chartCrosshair'
 
 type DrawTradingChartArgs = {
@@ -63,6 +63,7 @@ export function drawTradingChart({
     const priceRange = runtime.manualMaxP - runtime.manualMinP || 1
     const candleSpace = chartCanvas.width / Math.max(1, runtime.visibleCount)
     const candleWidth = Math.max(1, candleSpace * 0.7)
+    const timeframeMinutes = getTimeframeMinutes(currentTF)
     const getY = (price: number) => chartCanvas.height - ((price - runtime.manualMinP) / priceRange) * chartCanvas.height
 
     if (runtime.showDaySeparators) {
@@ -101,39 +102,86 @@ export function drawTradingChart({
         const x = (index - runtime.viewStart) * candleSpace + candleSpace / 2
         if (x > chartCanvas.width) return
 
+        const isSelected = runtime.selectedDrawingId === tool.id
+        if (tool.type === 'VLINE') {
+            ctx.save()
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)'
+            ctx.lineWidth = 1
+            ctx.setLineDash([2, 4])
+            ctx.beginPath()
+            ctx.moveTo(x, 0)
+            ctx.lineTo(x, chartCanvas.height)
+            ctx.stroke()
+            ctx.restore()
+            if (isSelected) {
+                ctx.save()
+                ctx.strokeStyle = '#6d28d9'
+                ctx.lineWidth = 1
+                ctx.setLineDash([6, 3])
+                ctx.beginPath()
+                ctx.moveTo(x - 2, 0)
+                ctx.lineTo(x - 2, chartCanvas.height)
+                ctx.stroke()
+                ctx.restore()
+            }
+            return
+        }
+
         if (tool.type === 'FVG') {
             const yTop = getY(tool.top)
             const yBot = getY(tool.bot)
             const height = Math.abs(yBot - yTop)
             const yDraw = Math.min(yTop, yBot)
+            const lengthMinutes = getDrawingLengthMinutes(tool.lengthMinutes)
+            const rectWidth = lengthMinutes === null ? chartCanvas.width - x : Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
+
             ctx.fillStyle = tool.color
-            ctx.fillRect(x, yDraw, chartCanvas.width - x, height)
+            ctx.fillRect(x, yDraw, rectWidth, height)
             ctx.strokeStyle = tool.border
-            ctx.lineWidth = 1
-            ctx.strokeRect(x, yDraw, chartCanvas.width - x, height)
+            ctx.lineWidth = isSelected ? 2 : 1
+            ctx.strokeRect(x, yDraw, rectWidth, height)
+            if (isSelected) {
+                ctx.save()
+                ctx.strokeStyle = '#6d28d9'
+                ctx.lineWidth = 1
+                ctx.setLineDash([6, 3])
+                ctx.strokeRect(x - 2, yDraw - 2, rectWidth + 4, height + 4)
+                ctx.restore()
+            }
             return
         }
 
-        if (tool.type === 'ORG') {
+        if (tool.type === 'ORG' || tool.type === 'NDOG' || tool.type === 'NWOG') {
             const yTop = getY(tool.top)
             const yBot = getY(tool.bot)
             const height = Math.abs(yBot - yTop)
             const yDraw = Math.min(yTop, yBot)
             const isPremium = tool.price0930 > tool.price1614
+            const fillColor = tool.type === 'ORG'
+                ? (isPremium ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)')
+                : (tool.fillColor ?? 'rgba(59, 130, 246, 0.14)')
+            const borderColor = tool.type === 'ORG'
+                ? (isPremium ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)')
+                : (tool.borderColor ?? 'rgba(59, 130, 246, 0.65)')
 
             ctx.save()
-            if (isPremium) {
-                ctx.fillStyle = 'rgba(34, 197, 94, 0.12)'
-                ctx.strokeStyle = 'rgba(34, 197, 94, 0.4)'
-            } else {
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.12)'
-                ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)'
-            }
+            ctx.fillStyle = fillColor
+            ctx.strokeStyle = borderColor
+
+            const lengthMinutes = getDrawingLengthMinutes(tool.lengthMinutes)
+            const rectWidth = lengthMinutes === null ? chartCanvas.width - x : Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
 
             ctx.setLineDash([2, 2])
-            const rectWidth = chartCanvas.width - x
             ctx.fillRect(x, yDraw, rectWidth, height)
             ctx.strokeRect(x, yDraw, rectWidth, height)
+            if (isSelected) {
+                ctx.save()
+                ctx.strokeStyle = '#6d28d9'
+                ctx.lineWidth = 1
+                ctx.setLineDash([6, 3])
+                ctx.strokeRect(x - 2, yDraw - 2, rectWidth + 4, height + 4)
+                ctx.restore()
+            }
 
             ctx.setLineDash([4, 4])
             ctx.lineWidth = 0.5
@@ -150,23 +198,30 @@ export function drawTradingChart({
                 ctx.fillText(lvl.toString(), chartCanvas.width - 25, yLvl - 2)
             })
 
-            ctx.fillStyle = isPremium ? '#15803d' : '#b91c1c'
+            ctx.fillStyle = tool.type === 'ORG' ? (isPremium ? '#15803d' : '#b91c1c') : (tool.borderColor ?? '#2563eb')
             ctx.font = 'bold 10px sans-serif'
-            ctx.fillText(`ORG (${isPremium ? 'Premium' : 'Discount'})`, x + 8, yDraw + 14)
+            const label = tool.type === 'ORG' ? `${tool.type} (${isPremium ? 'Premium' : 'Discount'})` : tool.type
+            ctx.fillText(label, x + 8, yDraw + 14)
             ctx.restore()
             return
         }
 
-        const y = getY(tool.price)
-        ctx.beginPath()
-        ctx.moveTo(x, y)
-        ctx.lineTo(chartCanvas.width, y)
-        ctx.strokeStyle = tool.color
-        ctx.lineWidth = 2
-        ctx.stroke()
-        ctx.fillStyle = tool.color
-        ctx.font = 'bold 10px sans-serif'
-        ctx.fillText(tool.type, x + 4, y - 4)
+        if ('price' in tool) {
+            const y = getY(tool.price)
+            const lengthMinutes = getDrawingLengthMinutes(tool.lengthMinutes)
+            const rectWidth = lengthMinutes === null ? chartCanvas.width - x : Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
+            ctx.beginPath()
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + rectWidth, y)
+            ctx.strokeStyle = isSelected ? '#6d28d9' : tool.color
+            ctx.lineWidth = isSelected ? 3 : 2
+            ctx.stroke()
+            if (!isSelected) {
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText(tool.type, x + 4, y - 4)
+            }
+        }
     })
 
     ctx.strokeStyle = '#000000'

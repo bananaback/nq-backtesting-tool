@@ -31,7 +31,14 @@ function App() {
     handleChartMouseLeave,
     handleYAxisMouseDown,
     handleYAxisDoubleClick,
+    selectedDrawingId,
+    setSelectedDrawingId,
+    lengthEditorDrawingId,
+    setLengthEditorDrawingId,
+    updateDrawingLengthMinutes,
   } = useTradingChartController()
+
+  const lengthEditorDrawing = drawings.find((drawing) => drawing.id === lengthEditorDrawingId) ?? null
 
   return (
     <div className="app-shell">
@@ -67,6 +74,15 @@ function App() {
         onCreateDrawing={createDrawing}
         onRemoveDrawing={removeDrawing}
         onCloseObjects={() => setObjectsOpen(false)}
+        selectedDrawingId={selectedDrawingId}
+        onSelectDrawing={setSelectedDrawingId}
+        lengthEditorDrawing={lengthEditorDrawing}
+        onEditDrawing={(drawing) => {
+          setSelectedDrawingId(drawing.id)
+          setLengthEditorDrawingId(drawing.id)
+        }}
+        onCloseLengthEditor={() => setLengthEditorDrawingId(null)}
+        onSaveDrawingLength={updateDrawingLengthMinutes}
       />
     </div>
   )

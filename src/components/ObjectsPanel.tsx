@@ -5,9 +5,11 @@ type ObjectsPanelProps = {
     drawings: Drawing[]
     onRemove: (id: number) => void
     onClose: () => void
+    selectedDrawingId?: number | null
+    onSelect?: (id: number | null) => void
+    onEditDrawing?: (drawing: Drawing) => void
 }
-
-function ObjectsPanel({ drawings, onRemove, onClose }: ObjectsPanelProps) {
+function ObjectsPanel({ drawings, onRemove, onClose, selectedDrawingId, onSelect, onEditDrawing }: ObjectsPanelProps) {
     return (
         <aside className="objects-panel">
             <div className="objects-panel__header">
@@ -24,9 +26,17 @@ function ObjectsPanel({ drawings, onRemove, onClose }: ObjectsPanelProps) {
                         .reverse()
                         .map((drawing) => {
                             const displayTime = formatObjectTime(drawing.time)
+                            const isSelected = selectedDrawingId === drawing.id
 
                             return (
-                                <div key={drawing.id} className="object-item">
+                                <div
+                                    key={drawing.id}
+                                    className={isSelected ? 'object-item is-selected' : 'object-item'}
+                                    onClick={() => {
+                                        onSelect && onSelect(drawing.id)
+                                        onEditDrawing && onEditDrawing(drawing)
+                                    }}
+                                >
                                     <div className="object-item__meta">
                                         <span className="object-item__id">#{drawing.id}</span>
                                         <span className="object-item__type">{drawing.type}</span>
@@ -35,7 +45,7 @@ function ObjectsPanel({ drawings, onRemove, onClose }: ObjectsPanelProps) {
                                     <button
                                         type="button"
                                         className="object-item__delete"
-                                        onClick={() => onRemove(drawing.id)}
+                                        onClick={(e) => { e.stopPropagation(); onRemove(drawing.id) }}
                                         aria-label={`Delete ${drawing.type} ${drawing.id}`}
                                     >
                                         &times;

@@ -1,5 +1,6 @@
 import type { RefObject, Dispatch, SetStateAction } from 'react'
 import type { ChartRuntimeState, DrawMenuState, Timeframe } from '../chartTypes'
+import { getDrawingLengthMinutes, getIndexByTime, getTimeframeMinutes } from '../chartUtils'
 
 type TradingChartWindowDeps = {
     chartCanvasRef: RefObject<HTMLCanvasElement | null>
@@ -10,6 +11,8 @@ type TradingChartWindowDeps = {
     setDrawMenu: Dispatch<SetStateAction<DrawMenuState>>
     drawCanvas: () => void
     resizeCanvas: () => void
+    setSelectedDrawingId: Dispatch<SetStateAction<number | null>>
+    removeDrawing: (id: number) => void
 }
 
 export function bindTradingChartWindowEvents({
@@ -21,6 +24,8 @@ export function bindTradingChartWindowEvents({
     setDrawMenu,
     drawCanvas,
     resizeCanvas,
+    setSelectedDrawingId,
+    removeDrawing,
 }: TradingChartWindowDeps) {
     resizeCanvas()
 
@@ -89,6 +94,76 @@ export function bindTradingChartWindowEvents({
             }
         }
 
+        // selection: when not in draw mode, a click near an annotation selects it
+        if (!drawModeRef.current && Math.abs(dx) < 6 && Math.abs(dy) < 6 && chartCanvas) {
+            const data = runtime.chartData[currentTfRef.current]
+            const chartRect = chartCanvas.getBoundingClientRect()
+            const candleSpace = chartCanvas.width / Math.max(1, runtime.visibleCount)
+            const cursorX = event.clientX - chartRect.left
+            const cursorY = event.clientY - chartRect.top
+
+            const priceRange = runtime.manualMaxP - runtime.manualMinP || 1
+            const getY = (price: number) => chartCanvas.height - ((price - runtime.manualMinP) / priceRange) * chartCanvas.height
+
+            let bestId: number | null = null
+            const timeframeMinutes = getTimeframeMinutes(currentTfRef.current)
+            for (let i = runtime.drawings.length - 1; i >= 0; i -= 1) {
+                const tool = runtime.drawings[i]
+                const idx = getIndexByTime(data, tool.time)
+                if (idx === -1) continue
+                const x = (idx - runtime.viewStart) * candleSpace + candleSpace / 2
+
+                if (tool.type === 'VLINE') {
+                    const dx = Math.abs(cursorX - x)
+                    if (dx <= 12) {
+                        bestId = tool.id
+                        break
+                    }
+                    continue
+                }
+
+                if (tool.type === 'FVG' || tool.type === 'ORG' || tool.type === 'NDOG' || tool.type === 'NWOG') {
+                    const top = tool.top
+                    const bot = tool.bot
+                    const yTop = getY(top)
+                    const yBot = getY(bot)
+                    const yDraw = Math.min(yTop, yBot)
+                    const height = Math.abs(yBot - yTop)
+                    const lengthMinutes = getDrawingLengthMinutes(tool.lengthMinutes)
+                    const rectWidth = lengthMinutes === null ? chartCanvas.width - x : Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
+                    const rightX = x + rectWidth
+
+                    if (cursorX >= x && cursorX <= rightX && cursorY >= yDraw && cursorY <= yDraw + height) {
+                        bestId = tool.id
+                        break
+                    }
+                    const dy = cursorY < yDraw ? yDraw - cursorY : cursorY > yDraw + height ? cursorY - (yDraw + height) : 0
+                    const dx = cursorX < x ? x - cursorX : cursorX > rightX ? cursorX - rightX : 0
+                    const dist = Math.hypot(dx, dy)
+                    if (dist <= 18) {
+                        bestId = tool.id
+                        break
+                    }
+                    continue
+                }
+
+                if ('price' in tool) {
+                    const y = getY(tool.price)
+                    const lengthMinutes = getDrawingLengthMinutes(tool.lengthMinutes)
+                    const rectWidth = lengthMinutes === null ? chartCanvas.width - x : Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
+                    const rightX = x + rectWidth
+                    const dy = Math.abs(cursorY - y)
+                    if (dy <= 12 && cursorX >= x && cursorX <= rightX) {
+                        bestId = tool.id
+                        break
+                    }
+                }
+            }
+
+            runtime.selectedDrawingId = bestId
+            setSelectedDrawingId(bestId)
+        }
+
         runtime.isDraggingChart = false
         runtime.isDraggingAxis = false
         if (chartCanvas) chartCanvas.style.cursor = 'crosshair'
@@ -104,15 +179,28 @@ export function bindTradingChartWindowEvents({
         }
     }
 
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+        const activeElement = document.activeElement as HTMLElement | null
+        if (activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName)) return
+
+        if ((event.key === 'Backspace' || event.key === 'Delete') && runtimeRef.current.selectedDrawingId !== null) {
+            event.preventDefault()
+            removeDrawing(runtimeRef.current.selectedDrawingId)
+            setSelectedDrawingId(null)
+        }
+    }
+
     window.addEventListener('resize', handleResize)
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handleMouseUp)
     window.addEventListener('mousedown', handleMouseDown)
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
         window.removeEventListener('resize', handleResize)
         window.removeEventListener('mousemove', handleMouseMove)
         window.removeEventListener('mouseup', handleMouseUp)
         window.removeEventListener('mousedown', handleMouseDown)
+        window.removeEventListener('keydown', handleKeyDown)
     }
 }
