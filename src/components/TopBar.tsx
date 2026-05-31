@@ -7,6 +7,9 @@ type TopBarProps = {
     drawMode: boolean
     showDaySeparators: boolean
     objectsOpen: boolean
+    candleFilterMinute: string
+    renderAfterFilterMinute: boolean
+    isPickingCandleFilter: boolean
     onTimeframeChange: (nextTF: Timeframe) => void
     onJumpDateChange: (value: string) => void
     onJumpToDate: () => void
@@ -14,6 +17,9 @@ type TopBarProps = {
     onToggleDaySeparators: () => void
     onToggleObjects: () => void
     onLoadCsvFiles: (files: FileList | null) => void
+    onRenderAfterFilterMinuteChange: (value: boolean) => void
+    onStepCandleFilterMinute: (deltaMinutes: number) => void
+    onStartCandleFilterPick: () => void
 }
 
 function getTimeframeLabel(tf: Timeframe) {
@@ -29,6 +35,9 @@ function TopBar({
     drawMode,
     showDaySeparators,
     objectsOpen,
+    candleFilterMinute,
+    renderAfterFilterMinute,
+    isPickingCandleFilter,
     onTimeframeChange,
     onJumpDateChange,
     onJumpToDate,
@@ -36,6 +45,9 @@ function TopBar({
     onToggleDaySeparators,
     onToggleObjects,
     onLoadCsvFiles,
+    onRenderAfterFilterMinuteChange,
+    onStepCandleFilterMinute,
+    onStartCandleFilterPick,
 }: TopBarProps) {
     return (
         <header className="topbar">
@@ -91,6 +103,42 @@ function TopBar({
                         Go
                     </button>
                 </form>
+
+                <div className="candle-filter" aria-label="Candle render filter">
+                    <span className="candle-filter__label">Candles after</span>
+                    <button
+                        type="button"
+                        className={isPickingCandleFilter ? 'candle-filter__pick is-on' : 'candle-filter__pick'}
+                        onClick={onStartCandleFilterPick}
+                    >
+                        {isPickingCandleFilter ? 'Picking… click candle' : 'Pick Candle'}
+                    </button>
+                    <span className="candle-filter__selected">{candleFilterMinute ? candleFilterMinute.replace('T', ' ') : 'No candle selected'}</span>
+                    <button
+                        type="button"
+                        className="candle-filter__step"
+                        onClick={() => onStepCandleFilterMinute(-1)}
+                        disabled={!candleFilterMinute}
+                    >
+                        Prev
+                    </button>
+                    <button
+                        type="button"
+                        className="candle-filter__step"
+                        onClick={() => onStepCandleFilterMinute(1)}
+                        disabled={!candleFilterMinute}
+                    >
+                        Next
+                    </button>
+                    <button
+                        type="button"
+                        className={renderAfterFilterMinute ? 'candle-filter__toggle is-on' : 'candle-filter__toggle'}
+                        onClick={() => onRenderAfterFilterMinuteChange(!renderAfterFilterMinute)}
+                        disabled={!candleFilterMinute}
+                    >
+                        {renderAfterFilterMinute ? 'After: Show' : 'After: Hide'}
+                    </button>
+                </div>
 
                 <label className="file-input">
                     <input

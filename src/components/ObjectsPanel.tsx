@@ -34,7 +34,6 @@ function ObjectsPanel({ drawings, onRemove, onClose, selectedDrawingId, onSelect
                                     className={isSelected ? 'object-item is-selected' : 'object-item'}
                                     onClick={() => {
                                         onSelect && onSelect(drawing.id)
-                                        onEditDrawing && onEditDrawing(drawing)
                                     }}
                                 >
                                     <div className="object-item__meta">
@@ -42,14 +41,26 @@ function ObjectsPanel({ drawings, onRemove, onClose, selectedDrawingId, onSelect
                                         <span className="object-item__type">{drawing.type}</span>
                                         <span className="object-item__time">@ {displayTime}</span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        className="object-item__delete"
-                                        onClick={(e) => { e.stopPropagation(); onRemove(drawing.id) }}
-                                        aria-label={`Delete ${drawing.type} ${drawing.id}`}
-                                    >
-                                        &times;
-                                    </button>
+                                    <div className="object-item__actions">
+                                        {onEditDrawing ? (
+                                            <button
+                                                type="button"
+                                                className="object-item__setup"
+                                                onClick={(e) => { e.stopPropagation(); onEditDrawing(drawing) }}
+                                                aria-label={`Setup ${drawing.type} ${drawing.id}`}
+                                            >
+                                                Setup
+                                            </button>
+                                        ) : null}
+                                        <button
+                                            type="button"
+                                            className="object-item__delete"
+                                            onClick={(e) => { e.stopPropagation(); onRemove(drawing.id) }}
+                                            aria-label={`Delete ${drawing.type} ${drawing.id}`}
+                                        >
+                                            &times;
+                                        </button>
+                                    </div>
                                 </div>
                             )
                         })

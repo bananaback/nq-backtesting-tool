@@ -17,6 +17,7 @@ type TradingChartActionsDeps = {
     setDrawMenu: Dispatch<SetStateAction<DrawMenuState>>
     setDrawings: Dispatch<SetStateAction<Drawing[]>>
     setSelectedDrawingId?: Dispatch<SetStateAction<number | null>>
+    setFibPlacementStep: Dispatch<SetStateAction<'pick-first' | 'pick-second' | null>>
     drawCanvas: () => void
 }
 
@@ -34,6 +35,7 @@ export function createTradingChartActions({
     setDrawMenu,
     setDrawings,
     setSelectedDrawingId,
+    setFibPlacementStep,
     drawCanvas,
 }: TradingChartActionsDeps) {
     const handleChartMouseDown = (event: ReactMouseEvent<HTMLCanvasElement>) => {
@@ -41,7 +43,7 @@ export function createTradingChartActions({
         runtime.mouseDownX = event.clientX
         runtime.mouseDownY = event.clientY
 
-        if (!drawMenuOpenRef.current) {
+        if (!drawMenuOpenRef.current && !runtime.pendingFibPlacement) {
             runtime.isDraggingChart = true
             runtime.lastX = event.clientX
             runtime.lastY = event.clientY
@@ -270,6 +272,19 @@ export function createTradingChartActions({
 
     const createDrawing = (type: ToolType) => {
         const runtime = runtimeRef.current
+        if (type === 'FIB') {
+            runtime.pendingFibPlacement = { firstPoint: null, templateKey: 'fibo_quadrant' }
+            setFibPlacementStep('pick-first')
+            drawMenuOpenRef.current = false
+            setDrawMenu(null)
+            runtime.selectedCandleIndex = null
+            drawCanvas()
+            return
+        }
+
+        runtime.pendingFibPlacement = null
+        setFibPlacementStep(null)
+
         const data = runtime.chartData[currentTfRef.current]
         const index = runtime.selectedCandleIndex
         if (index === null || !data[index]) {
@@ -434,6 +449,8 @@ export function createTradingChartActions({
         }
 
         runtime.selectedCandleIndex = null
+        runtime.pendingFibPlacement = null
+        setFibPlacementStep(null)
         drawMenuOpenRef.current = false
         setDrawMenu(null)
     }

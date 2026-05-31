@@ -1,6 +1,6 @@
 import type { RefObject, Dispatch, SetStateAction } from 'react'
 import type { ChartRuntimeState, DrawMenuState, Timeframe } from '../chartTypes'
-import { getDrawingLengthMinutes, getIndexByTime, getTimeframeMinutes } from '../chartUtils'
+import { getDefaultFibLevels, getDrawingLengthMinutes, getFibLevelPrice, getIndexByTime, getTimeframeMinutes, snapPriceToCandleOHLC } from '../chartUtils'
 
 type TradingChartWindowDeps = {
     chartCanvasRef: RefObject<HTMLCanvasElement | null>
@@ -9,10 +9,16 @@ type TradingChartWindowDeps = {
     drawModeRef: RefObject<boolean>
     drawMenuOpenRef: RefObject<boolean>
     setDrawMenu: Dispatch<SetStateAction<DrawMenuState>>
+    setDrawings: Dispatch<SetStateAction<ChartRuntimeState['drawings']>>
     drawCanvas: () => void
     resizeCanvas: () => void
     setSelectedDrawingId: Dispatch<SetStateAction<number | null>>
+    setFibPlacementStep: Dispatch<SetStateAction<'pick-first' | 'pick-second' | null>>
+    cancelFibPlacement: () => void
     removeDrawing: (id: number) => void
+    setCandleFilterMinute: Dispatch<SetStateAction<string>>
+    setRenderAfterFilterMinute: Dispatch<SetStateAction<boolean>>
+    setIsPickingCandleFilter: Dispatch<SetStateAction<boolean>>
 }
 
 export function bindTradingChartWindowEvents({
@@ -22,10 +28,16 @@ export function bindTradingChartWindowEvents({
     drawModeRef,
     drawMenuOpenRef,
     setDrawMenu,
+    setDrawings,
     drawCanvas,
     resizeCanvas,
     setSelectedDrawingId,
+    setFibPlacementStep,
+    cancelFibPlacement,
     removeDrawing,
+    setCandleFilterMinute,
+    setRenderAfterFilterMinute,
+    setIsPickingCandleFilter,
 }: TradingChartWindowDeps) {
     resizeCanvas()
 
@@ -80,9 +92,88 @@ export function bindTradingChartWindowEvents({
         const chartCanvas = chartCanvasRef.current
         const dx = event.clientX - runtime.mouseDownX
         const dy = event.clientY - runtime.mouseDownY
+        const data = runtime.chartData[currentTfRef.current]
+
+        if (runtime.pendingCandleFilterPick && Math.abs(dx) < 3 && Math.abs(dy) < 3 && chartCanvas) {
+            const chartRect = chartCanvas.getBoundingClientRect()
+            const candleSpace = chartCanvas.width / Math.max(1, runtime.visibleCount)
+            const hoverIndex = Math.floor(runtime.viewStart + (event.clientX - chartRect.left) / candleSpace)
+
+            if (hoverIndex >= 0 && hoverIndex < data.length) {
+                const rawTime = data[hoverIndex].time
+                const normalized = rawTime.includes(' ') ? rawTime.replace(' ', 'T') : rawTime
+                const parsed = new Date(normalized)
+                const minuteValue = Number.isNaN(parsed.getTime())
+                    ? normalized.slice(0, 16)
+                    : `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}T${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`
+
+                runtime.candleFilterMinute = minuteValue
+                runtime.renderAfterFilterMinute = false
+                runtime.pendingCandleFilterPick = false
+                setCandleFilterMinute(minuteValue)
+                setRenderAfterFilterMinute(false)
+                setIsPickingCandleFilter(false)
+                drawCanvas()
+                return
+            }
+        }
+
+        if (drawModeRef.current && Math.abs(dx) < 3 && Math.abs(dy) < 3 && chartCanvas) {
+            const chartRect = chartCanvas.getBoundingClientRect()
+            const candleSpace = chartCanvas.width / Math.max(1, runtime.visibleCount)
+            const hoverIndex = Math.floor(runtime.viewStart + (event.clientX - chartRect.left) / candleSpace)
+
+            if (hoverIndex >= 0 && hoverIndex < data.length) {
+                const candle = data[hoverIndex]
+                const priceRange = runtime.manualMaxP - runtime.manualMinP || 1
+                const cursorPrice = runtime.manualMaxP - ((event.clientY - chartRect.top) / chartCanvas.height) * priceRange
+                const snappedPrice = snapPriceToCandleOHLC(candle, cursorPrice)
+
+                if (runtime.pendingFibPlacement) {
+                    const pending = runtime.pendingFibPlacement
+                    if (pending.firstPoint) {
+                        const newId = runtime.drawingIdCounter
+                        const nextDrawing = {
+                            id: newId,
+                            type: 'FIB' as const,
+                            time: pending.firstPoint.time,
+                            time2: candle.time,
+                            price1: pending.firstPoint.price,
+                            price2: snappedPrice,
+                            templateKey: pending.templateKey,
+                            extendRight: false,
+                            reverse: false,
+                            lineStyle: 'normal' as const,
+                            lineWidth: 1.5,
+                            levels: getDefaultFibLevels(pending.templateKey),
+                        }
+                        runtime.drawingIdCounter += 1
+                        runtime.drawings = [...runtime.drawings, nextDrawing]
+                        runtime.selectedDrawingId = newId
+                        setDrawings(runtime.drawings)
+                        setSelectedDrawingId(newId)
+                        setFibPlacementStep(null)
+                        cancelFibPlacement()
+                        drawCanvas()
+                        return
+                    }
+
+                    runtime.pendingFibPlacement = {
+                        firstPoint: { time: candle.time, price: snappedPrice },
+                        templateKey: pending.templateKey,
+                    }
+                    setFibPlacementStep('pick-second')
+                    drawCanvas()
+                    return
+                }
+
+                runtime.selectedCandleIndex = hoverIndex
+                drawMenuOpenRef.current = true
+                setDrawMenu({ x: event.clientX - chartRect.left, y: event.clientY - chartRect.top })
+            }
+        }
 
         if (drawModeRef.current && Math.abs(dx) < 3 && Math.abs(dy) < 3 && !drawMenuOpenRef.current && chartCanvas) {
-            const data = runtime.chartData[currentTfRef.current]
             const chartRect = chartCanvas.getBoundingClientRect()
             const candleSpace = chartCanvas.width / Math.max(1, runtime.visibleCount)
             const hoverIndex = Math.floor(runtime.viewStart + (event.clientX - chartRect.left) / candleSpace)
@@ -119,6 +210,45 @@ export function bindTradingChartWindowEvents({
                         bestId = tool.id
                         break
                     }
+                    continue
+                }
+
+                if (tool.type === 'FIB') {
+                    const index1 = getIndexByTime(data, tool.time)
+                    const index2 = getIndexByTime(data, tool.time2)
+                    if (index1 === -1 || index2 === -1) continue
+
+                    const x1 = (index1 - runtime.viewStart) * candleSpace + candleSpace / 2
+                    const x2 = (index2 - runtime.viewStart) * candleSpace + candleSpace / 2
+                    const y1 = getY(tool.price1)
+                    const y2 = getY(tool.price2)
+                    const leftX = Math.min(x1, x2)
+                    const rightX = Math.max(x1, x2)
+                    const segX = x2 - x1
+                    const segY = y2 - y1
+                    const segLengthSq = segX * segX + segY * segY || 1
+                    const rawT = ((cursorX - x1) * segX + (cursorY - y1) * segY) / segLengthSq
+                    const t = Math.max(0, Math.min(1, rawT))
+                    const projX = x1 + segX * t
+                    const projY = y1 + segY * t
+
+                    if (Math.hypot(cursorX - projX, cursorY - projY) <= 12) {
+                        bestId = tool.id
+                        break
+                    }
+
+                    for (const level of tool.levels) {
+                        if (!level.visible) continue
+                        const y = getY(getFibLevelPrice(tool, level.ratio))
+                        const levelRightX = tool.extendRight ? chartCanvas.width : rightX
+                        const onSegment = cursorX >= leftX && cursorX <= levelRightX
+                        const dyLevel = Math.abs(cursorY - y)
+                        if (onSegment && dyLevel <= 10) {
+                            bestId = tool.id
+                            break
+                        }
+                    }
+                    if (bestId !== null) break
                     continue
                 }
 
@@ -187,6 +317,18 @@ export function bindTradingChartWindowEvents({
             event.preventDefault()
             removeDrawing(runtimeRef.current.selectedDrawingId)
             setSelectedDrawingId(null)
+        }
+
+        if (event.key === 'Escape' && runtimeRef.current.pendingFibPlacement) {
+            event.preventDefault()
+            cancelFibPlacement()
+        }
+
+        if (event.key === 'Escape' && runtimeRef.current.pendingCandleFilterPick) {
+            event.preventDefault()
+            runtimeRef.current.pendingCandleFilterPick = false
+            setIsPickingCandleFilter(false)
+            drawCanvas()
         }
     }
 

@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { ChartRuntimeState, OhlcState, Timeframe } from './chartTypes'
-import { getDrawingLengthMinutes, getIndexByTime, getTimeframeMinutes, isMidnightCandle } from './chartUtils'
+import { getDrawingLengthMinutes, getFibLevelPrice, getFibLineDash, getIndexByTime, getTimeframeMinutes, isMidnightCandle, snapPriceToCandleOHLC } from './chartUtils'
 import { drawCrosshairOverlay } from './chartCrosshair'
 
 type DrawTradingChartArgs = {
@@ -11,6 +11,97 @@ type DrawTradingChartArgs = {
     currentTF: Timeframe
     drawMenuOpen: boolean
     setOhlc: Dispatch<SetStateAction<OhlcState>>
+}
+
+type FibRenderLevel = {
+    ratio: number
+    label: string
+    color: string
+    visible: boolean
+}
+
+type FibRenderDrawing = {
+    time: string
+    time2: string
+    price1: number
+    price2: number
+    extendRight: boolean
+    reverse: boolean
+    lineStyle: 'normal' | 'dashed' | 'dotted'
+    lineWidth: number
+    levels: FibRenderLevel[]
+}
+
+function drawFibDrawing(
+    ctx: CanvasRenderingContext2D,
+    chartCanvas: HTMLCanvasElement,
+    runtime: ChartRuntimeState,
+    data: ChartRuntimeState['chartData'][Timeframe],
+    candleSpace: number,
+    getY: (price: number) => number,
+    fibTool: FibRenderDrawing,
+    isSelected: boolean,
+) {
+    const index1 = getIndexByTime(data, fibTool.time)
+    const index2 = getIndexByTime(data, fibTool.time2)
+    if (index1 === -1 || index2 === -1) return
+
+    const x1 = (index1 - runtime.viewStart) * candleSpace + candleSpace / 2
+    const x2 = (index2 - runtime.viewStart) * candleSpace + candleSpace / 2
+    const y1 = getY(fibTool.price1)
+    const y2 = getY(fibTool.price2)
+    const leftX = Math.min(x1, x2)
+    const rightX = Math.max(x1, x2)
+    const drawRightX = fibTool.extendRight ? chartCanvas.width : rightX
+    const levels = fibTool.levels.filter((level) => level.visible)
+    const dash = getFibLineDash(fibTool.lineStyle)
+    const baseLineWidth = Number.isFinite(fibTool.lineWidth) ? Math.max(0.5, fibTool.lineWidth) : 1.5
+
+    ctx.save()
+    ctx.strokeStyle = '#000000'
+    ctx.setLineDash(dash)
+    ctx.lineWidth = isSelected ? baseLineWidth + 0.8 : baseLineWidth
+    ctx.beginPath()
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
+
+    ctx.fillStyle = '#000000'
+    ctx.beginPath()
+    ctx.arc(x1, y1, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(x2, y2, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+
+    levels.forEach((level) => {
+        const y = getY(getFibLevelPrice(fibTool, level.ratio))
+        ctx.strokeStyle = level.color || '#000000'
+        ctx.setLineDash(dash)
+        ctx.lineWidth = baseLineWidth
+        ctx.beginPath()
+        ctx.moveTo(leftX, y)
+        ctx.lineTo(drawRightX, y)
+        ctx.stroke()
+
+        ctx.fillStyle = level.color || '#000000'
+        ctx.font = 'bold 10px sans-serif'
+        ctx.fillText(level.label, drawRightX - 44, y - 4)
+    })
+
+    if (isSelected) {
+        ctx.save()
+        ctx.strokeStyle = '#6d28d9'
+        ctx.setLineDash([6, 3])
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(x1 - 2, y1 - 2)
+        ctx.lineTo(x2 + 2, y2 + 2)
+        ctx.stroke()
+        ctx.restore()
+    }
+
+    ctx.restore()
 }
 
 export function drawTradingChart({
@@ -65,6 +156,16 @@ export function drawTradingChart({
     const candleWidth = Math.max(1, candleSpace * 0.7)
     const timeframeMinutes = getTimeframeMinutes(currentTF)
     const getY = (price: number) => chartCanvas.height - ((price - runtime.manualMinP) / priceRange) * chartCanvas.height
+    const filterCutoffEpoch = runtime.candleFilterMinute ? new Date(runtime.candleFilterMinute).getTime() : Number.NaN
+
+    const shouldRenderCandle = (time: string) => {
+        if (!Number.isFinite(filterCutoffEpoch)) return true
+        const normalized = time.includes(' ') ? time.replace(' ', 'T') : time
+        const candleEpoch = new Date(normalized).getTime()
+        if (!Number.isFinite(candleEpoch)) return true
+        if (candleEpoch <= filterCutoffEpoch) return true
+        return runtime.renderAfterFilterMinute
+    }
 
     if (runtime.showDaySeparators) {
         for (let i = Math.max(startIdx, 1); i <= endIdx; i += 1) {
@@ -100,7 +201,6 @@ export function drawTradingChart({
         if (index === -1) return
 
         const x = (index - runtime.viewStart) * candleSpace + candleSpace / 2
-        if (x > chartCanvas.width) return
 
         const isSelected = runtime.selectedDrawingId === tool.id
         if (tool.type === 'VLINE') {
@@ -124,6 +224,11 @@ export function drawTradingChart({
                 ctx.stroke()
                 ctx.restore()
             }
+            return
+        }
+
+        if (tool.type === 'FIB') {
+            drawFibDrawing(ctx, chartCanvas, runtime, data, candleSpace, getY, tool as unknown as FibRenderDrawing, isSelected)
             return
         }
 
@@ -224,6 +329,83 @@ export function drawTradingChart({
         }
     })
 
+    const pendingFib = runtime.pendingFibPlacement
+    if (pendingFib && !drawMenuOpen) {
+        ctx.save()
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.8)'
+        ctx.fillStyle = '#0f172a'
+        ctx.setLineDash([5, 4])
+        ctx.lineWidth = 1.5
+
+        if (!pendingFib.firstPoint) {
+            if (runtime.crosshairActive) {
+                const hoverDataIndex = Math.round((runtime.crosshairX - candleSpace / 2) / candleSpace + runtime.viewStart)
+                if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
+                    const hoverCandle = data[hoverDataIndex]
+                    const cursorPrice = runtime.manualMaxP - (runtime.crosshairY / chartCanvas.height) * priceRange
+                    const firstPrice = snapPriceToCandleOHLC(hoverCandle, cursorPrice)
+                    const firstX = (hoverDataIndex - runtime.viewStart) * candleSpace + candleSpace / 2
+                    const firstY = getY(firstPrice)
+
+                    ctx.beginPath()
+                    ctx.arc(firstX, firstY, 3.5, 0, Math.PI * 2)
+                    ctx.fill()
+                }
+            }
+
+            ctx.setLineDash([])
+            ctx.font = 'bold 11px sans-serif'
+            ctx.fillStyle = '#0f172a'
+            ctx.fillText('Fibonacci: click first anchor or press Esc to cancel', 12, 18)
+            ctx.restore()
+        } else {
+            const firstIndex = getIndexByTime(data, pendingFib.firstPoint.time)
+            if (firstIndex !== -1) {
+                const firstX = (firstIndex - runtime.viewStart) * candleSpace + candleSpace / 2
+                const firstY = getY(pendingFib.firstPoint.price)
+
+                ctx.beginPath()
+                ctx.arc(firstX, firstY, 3.5, 0, Math.PI * 2)
+                ctx.fill()
+
+                if (runtime.crosshairActive) {
+                    const hoverDataIndex = Math.round((runtime.crosshairX - candleSpace / 2) / candleSpace + runtime.viewStart)
+                    if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
+                        const hoverCandle = data[hoverDataIndex]
+                        const cursorPrice = runtime.manualMaxP - (runtime.crosshairY / chartCanvas.height) * priceRange
+                        const secondPrice = snapPriceToCandleOHLC(hoverCandle, cursorPrice)
+                        const secondX = (hoverDataIndex - runtime.viewStart) * candleSpace + candleSpace / 2
+                        const secondY = getY(secondPrice)
+
+                        ctx.beginPath()
+                        ctx.moveTo(firstX, firstY)
+                        ctx.lineTo(secondX, secondY)
+                        ctx.stroke()
+
+                        ctx.beginPath()
+                        ctx.arc(secondX, secondY, 3.5, 0, Math.PI * 2)
+                        ctx.fill()
+                    }
+                }
+            }
+
+            ctx.setLineDash([])
+            ctx.font = 'bold 11px sans-serif'
+            ctx.fillStyle = '#0f172a'
+            ctx.fillText('Fibonacci: click second anchor or press Esc to cancel', 12, 18)
+            ctx.restore()
+        }
+    }
+
+    if (runtime.pendingCandleFilterPick && !drawMenuOpen) {
+        ctx.save()
+        ctx.setLineDash([])
+        ctx.font = 'bold 11px sans-serif'
+        ctx.fillStyle = '#0f172a'
+        ctx.fillText('Candle Filter: click a candle to set cutoff time', 12, pendingFib ? 36 : 18)
+        ctx.restore()
+    }
+
     ctx.strokeStyle = '#000000'
     ctx.lineWidth = 1
     xCtx.fillStyle = '#6b7280'
@@ -234,6 +416,7 @@ export function drawTradingChart({
     let lastDrawnTimeX = -100
     for (let i = startIdx; i <= endIdx; i += 1) {
         const candle = data[i]
+        if (!shouldRenderCandle(candle.time)) continue
         const x = (i - runtime.viewStart) * candleSpace + candleSpace / 2
         const xLine = Math.floor(x) + 0.5
 

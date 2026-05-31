@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChartRuntimeState, Drawing, DrawMenuState, OhlcState, Timeframe } from '../chartTypes'
 import { createEmptyChartData } from '../chartTypes'
+import { getTimeframeMinutes } from '../chartUtils'
 import { drawTradingChart } from '../chartRender'
 import { resizeTradingChart } from '../chartResize'
 import { createTradingChartActions } from './useTradingChartActions'
@@ -34,6 +35,10 @@ export function useTradingChartController() {
         isDraggingAxis: false,
         lastX: 0,
         lastY: 0,
+        pendingFibPlacement: null,
+        pendingCandleFilterPick: false,
+        candleFilterMinute: '',
+        renderAfterFilterMinute: true,
     })
 
     const currentTfRef = useRef<Timeframe>('m1')
@@ -50,7 +55,28 @@ export function useTradingChartController() {
     const [drawings, setDrawings] = useState<Drawing[]>([])
     const [selectedDrawingId, setSelectedDrawingId] = useState<number | null>(null)
     const [lengthEditorDrawingId, setLengthEditorDrawingId] = useState<number | null>(null)
+    const [fibSetupDrawingId, setFibSetupDrawingId] = useState<number | null>(null)
+    const [fibPlacementStep, setFibPlacementStep] = useState<'pick-first' | 'pick-second' | null>(null)
     const [ohlc, setOhlc] = useState<OhlcState>({ visible: false })
+    const [candleFilterMinute, setCandleFilterMinute] = useState('')
+    const [renderAfterFilterMinute, setRenderAfterFilterMinute] = useState(true)
+    const [isPickingCandleFilter, setIsPickingCandleFilter] = useState(false)
+
+    const shiftCandleFilterMinute = (deltaMinutes: number) => {
+        if (!candleFilterMinute) return
+        const base = new Date(candleFilterMinute)
+        if (Number.isNaN(base.getTime())) return
+        const stepMinutes = getTimeframeMinutes(currentTF)
+        base.setMinutes(base.getMinutes() + deltaMinutes * stepMinutes)
+        const nextValue = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}T${String(base.getHours()).padStart(2, '0')}:${String(base.getMinutes()).padStart(2, '0')}`
+        setCandleFilterMinute(nextValue)
+    }
+
+    const startCandleFilterPick = () => {
+        runtimeRef.current.pendingCandleFilterPick = true
+        setIsPickingCandleFilter(true)
+        drawCanvas()
+    }
 
     const drawCanvas = () => {
         const chartCanvas = chartCanvasRef.current
@@ -106,6 +132,7 @@ export function useTradingChartController() {
         setDrawMenu,
         setDrawings,
         setSelectedDrawingId,
+        setFibPlacementStep,
         drawCanvas,
     })
 
@@ -139,6 +166,21 @@ export function useTradingChartController() {
         drawCanvas()
     }, [selectedDrawingId])
 
+    useEffect(() => {
+        runtimeRef.current.candleFilterMinute = candleFilterMinute
+        drawCanvas()
+    }, [candleFilterMinute])
+
+    useEffect(() => {
+        runtimeRef.current.renderAfterFilterMinute = renderAfterFilterMinute
+        drawCanvas()
+    }, [renderAfterFilterMinute])
+
+    useEffect(() => {
+        runtimeRef.current.pendingCandleFilterPick = isPickingCandleFilter
+        drawCanvas()
+    }, [isPickingCandleFilter])
+
     const updateDrawingLengthMinutes = (drawingId: number, lengthMinutes: number | null) => {
         const nextDrawings = runtimeRef.current.drawings.map((drawing) => {
             if (drawing.id !== drawingId) return drawing
@@ -153,6 +195,25 @@ export function useTradingChartController() {
         drawCanvas()
     }
 
+    const updateFibDrawing = (drawingId: number, updates: Partial<Extract<Drawing, { type: 'FIB' }>>) => {
+        const nextDrawings = runtimeRef.current.drawings.map((drawing) => {
+            if (drawing.id !== drawingId || drawing.type !== 'FIB') return drawing
+            return { ...drawing, ...updates }
+        })
+
+        runtimeRef.current.drawings = nextDrawings
+        setDrawings(nextDrawings)
+        drawCanvas()
+    }
+
+    const cancelFibPlacement = () => {
+        runtimeRef.current.pendingFibPlacement = null
+        setFibPlacementStep(null)
+        drawMenuOpenRef.current = false
+        setDrawMenu(null)
+        drawCanvas()
+    }
+
     useEffect(() => bindTradingChartWindowEvents({
         chartCanvasRef,
         runtimeRef,
@@ -160,10 +221,16 @@ export function useTradingChartController() {
         drawModeRef,
         drawMenuOpenRef,
         setDrawMenu,
+        setDrawings,
         drawCanvas,
         resizeCanvas,
         setSelectedDrawingId,
+        setFibPlacementStep,
+        cancelFibPlacement,
         removeDrawing,
+        setCandleFilterMinute,
+        setRenderAfterFilterMinute,
+        setIsPickingCandleFilter,
     }), [])
 
     return {
@@ -197,6 +264,18 @@ export function useTradingChartController() {
         setSelectedDrawingId,
         lengthEditorDrawingId,
         setLengthEditorDrawingId,
+        fibSetupDrawingId,
+        setFibSetupDrawingId,
+        fibPlacementStep,
+        cancelFibPlacement,
         updateDrawingLengthMinutes,
+        updateFibDrawing,
+        candleFilterMinute,
+        setCandleFilterMinute,
+        renderAfterFilterMinute,
+        setRenderAfterFilterMinute,
+        shiftCandleFilterMinute,
+        isPickingCandleFilter,
+        startCandleFilterPick,
     }
 }

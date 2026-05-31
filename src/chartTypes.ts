@@ -4,6 +4,7 @@ export type ToolType =
     | 'FVG'
     | 'FVG_FIRST'
     | 'VLINE'
+    | 'FIB'
     | 'OB'
     | 'EQH'
     | 'EQL'
@@ -41,6 +42,32 @@ export type VerticalLineDrawing = {
     color: string
 }
 
+export type FibTemplateKey = 'fibo_quadrant' | 'premium_discount' | 'ict_ote' | 'ict_standard_deviation'
+
+export type FibLineStyle = 'normal' | 'dashed' | 'dotted'
+
+export type FibLevel = {
+    ratio: number
+    label: string
+    color: string
+    visible: boolean
+}
+
+export type FibDrawing = {
+    id: number
+    type: 'FIB'
+    time: string
+    time2: string
+    price1: number
+    price2: number
+    templateKey: FibTemplateKey
+    extendRight: boolean
+    reverse: boolean
+    lineStyle: FibLineStyle
+    lineWidth: number
+    levels: FibLevel[]
+}
+
 export type OrgDrawing = {
     id: number
     type: 'ORG' | 'NDOG' | 'NWOG'
@@ -56,16 +83,16 @@ export type OrgDrawing = {
 
 export type LineDrawing = {
     id: number
-    type: Exclude<ToolType, 'FVG' | 'ORG' | 'NDOG' | 'NWOG' | 'VLINE' | 'FVG_FIRST' | 'ORG_RECENT_5' | 'GAP_RECENT_5'>
+    type: 'OB' | 'EQH' | 'EQL' | 'SH' | 'SL'
     time: string
     price: number
     lengthMinutes?: number | null
     color: string
 }
 
-export type Drawing = FvgDrawing | LineDrawing | OrgDrawing | VerticalLineDrawing
+export type Drawing = FvgDrawing | LineDrawing | OrgDrawing | VerticalLineDrawing | FibDrawing
 
-export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'>
+export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'> | Omit<FibDrawing, 'id'>
 
 export type DrawMenuState =
     | {
@@ -86,12 +113,21 @@ export type OhlcState =
     }
     | { visible: false }
 
+export type FibPlacementState = {
+    firstPoint: {
+        time: string
+        price: number
+    } | null
+    templateKey: FibTemplateKey
+}
+
 export const TIMEFRAMES: Timeframe[] = ['m1', 'm5', 'm15', 'h1']
 
 export const DRAW_TOOL_OPTIONS: ToolType[] = [
     'FVG',
     'FVG_FIRST',
     'VLINE',
+    'FIB',
     'OB',
     'EQH',
     'EQL',
@@ -135,4 +171,8 @@ export type ChartRuntimeState = {
     isDraggingAxis: boolean
     lastX: number
     lastY: number
+    pendingFibPlacement: FibPlacementState | null
+    pendingCandleFilterPick: boolean
+    candleFilterMinute: string
+    renderAfterFilterMinute: boolean
 }

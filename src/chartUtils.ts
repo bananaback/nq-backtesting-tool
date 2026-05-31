@@ -1,4 +1,69 @@
-import type { Candle, Timeframe, ToolType } from './chartTypes'
+import type { Candle, FibDrawing, FibLevel, FibLineStyle, FibTemplateKey, Timeframe, ToolType } from './chartTypes'
+
+function createFibLevels(ratios: number[]) {
+    return ratios.map((ratio) => ({
+        ratio,
+        label: ratio.toString(),
+        color: '#000000',
+        visible: true,
+    }))
+}
+
+export const FIB_TEMPLATES: Record<FibTemplateKey, { label: string; levels: FibLevel[] }> = {
+    fibo_quadrant: {
+        label: 'Fibo Quadrant',
+        levels: createFibLevels([0, 0.25, 0.5, 0.75, 1]),
+    },
+    premium_discount: {
+        label: 'Premium Discount Fibo',
+        levels: createFibLevels([0, 0.5, 1]),
+    },
+    ict_ote: {
+        label: 'ICT OTE',
+        levels: createFibLevels([0, 0.5, 0.62, 0.705, 0.79, 1, -0.27, -0.62, -1]),
+    },
+    ict_standard_deviation: {
+        label: 'ICT Standard Deviation',
+        levels: createFibLevels([0, 0.25, 0.5, 0.75, 1, -0.5, -1, -1.5, -2, -2.5]),
+    },
+}
+
+export function getDefaultFibLevels(templateKey: FibTemplateKey) {
+    return FIB_TEMPLATES[templateKey].levels.map((level) => ({ ...level }))
+}
+
+export function getFibTemplateLabel(templateKey: FibTemplateKey) {
+    return FIB_TEMPLATES[templateKey].label
+}
+
+export function getFibLevelPrice(drawing: Pick<FibDrawing, 'price1' | 'price2' | 'reverse'>, ratio: number) {
+    if (drawing.reverse) {
+        return drawing.price2 + (drawing.price1 - drawing.price2) * ratio
+    }
+    return drawing.price1 + (drawing.price2 - drawing.price1) * ratio
+}
+
+export function getFibLineDash(style: FibLineStyle) {
+    if (style === 'dashed') return [8, 4]
+    if (style === 'dotted') return [2, 4]
+    return []
+}
+
+export function snapPriceToCandleOHLC(candle: Candle, price: number) {
+    const candidates = [candle.open, candle.high, candle.low, candle.close]
+    let best = candidates[0]
+    let bestDistance = Math.abs(price - best)
+
+    for (let i = 1; i < candidates.length; i += 1) {
+        const distance = Math.abs(price - candidates[i])
+        if (distance < bestDistance) {
+            best = candidates[i]
+            bestDistance = distance
+        }
+    }
+
+    return best
+}
 
 export function clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max)
@@ -86,6 +151,7 @@ export function getToolLabel(tool: ToolType) {
     if (tool === 'FVG') return 'Fair Value Gap'
     if (tool === 'FVG_FIRST') return 'First Fair Value Gap'
     if (tool === 'VLINE') return 'Vertical Line'
+    if (tool === 'FIB') return 'Fibonacci'
     if (tool === 'OB') return 'Order Block'
     if (tool === 'EQH') return 'Equal Highs'
     if (tool === 'EQL') return 'Equal Lows'

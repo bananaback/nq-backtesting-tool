@@ -35,10 +35,22 @@ function App() {
     setSelectedDrawingId,
     lengthEditorDrawingId,
     setLengthEditorDrawingId,
+    fibSetupDrawingId,
+    setFibSetupDrawingId,
+    fibPlacementStep,
+    cancelFibPlacement,
     updateDrawingLengthMinutes,
+    updateFibDrawing,
+    candleFilterMinute,
+    renderAfterFilterMinute,
+    setRenderAfterFilterMinute,
+    shiftCandleFilterMinute,
+    isPickingCandleFilter,
+    startCandleFilterPick,
   } = useTradingChartController()
 
   const lengthEditorDrawing = drawings.find((drawing) => drawing.id === lengthEditorDrawingId) ?? null
+  const fibSetupDrawing = drawings.find((drawing) => drawing.id === fibSetupDrawingId) ?? null
 
   return (
     <div className="app-shell">
@@ -48,6 +60,9 @@ function App() {
         drawMode={drawMode}
         showDaySeparators={showDaySeparators}
         objectsOpen={objectsOpen}
+        candleFilterMinute={candleFilterMinute}
+        renderAfterFilterMinute={renderAfterFilterMinute}
+        isPickingCandleFilter={isPickingCandleFilter}
         onTimeframeChange={changeTimeframe}
         onJumpDateChange={setJumpDate}
         onJumpToDate={() => jumpToDate(jumpDate)}
@@ -55,6 +70,9 @@ function App() {
         onToggleDaySeparators={toggleDaySeparators}
         onToggleObjects={() => setObjectsOpen((value) => !value)}
         onLoadCsvFiles={loadCsvFiles}
+        onRenderAfterFilterMinuteChange={setRenderAfterFilterMinute}
+        onStepCandleFilterMinute={shiftCandleFilterMinute}
+        onStartCandleFilterPick={startCandleFilterPick}
       />
 
       <ChartStage
@@ -79,10 +97,21 @@ function App() {
         lengthEditorDrawing={lengthEditorDrawing}
         onEditDrawing={(drawing) => {
           setSelectedDrawingId(drawing.id)
-          setLengthEditorDrawingId(drawing.id)
+          if (drawing.type === 'FIB') {
+            setFibSetupDrawingId(drawing.id)
+            setLengthEditorDrawingId(null)
+          } else {
+            setLengthEditorDrawingId(drawing.id)
+            setFibSetupDrawingId(null)
+          }
         }}
         onCloseLengthEditor={() => setLengthEditorDrawingId(null)}
         onSaveDrawingLength={updateDrawingLengthMinutes}
+        fibSetupDrawing={fibSetupDrawing}
+        onCloseFibSetup={() => setFibSetupDrawingId(null)}
+        onSaveFibSetup={(drawingId, updates) => updateFibDrawing(drawingId, updates)}
+        fibPlacementStep={fibPlacementStep}
+        onCancelFibPlacement={cancelFibPlacement}
       />
     </div>
   )
