@@ -2,8 +2,19 @@ import ChartStage from './components/ChartStage'
 import TopBar from './components/TopBar'
 import { useTradingChartController } from './hooks/useTradingChartController'
 import './App.css'
+import { useEffect, useState } from 'react'
 
 function App() {
+  const [isTopBarVisible, setIsTopBarVisible] = useState(true)
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [isTopBarVisible])
+
   const {
     chartCanvasRef,
     yAxisCanvasRef,
@@ -53,27 +64,90 @@ function App() {
   const fibSetupDrawing = drawings.find((drawing) => drawing.id === fibSetupDrawingId) ?? null
 
   return (
-    <div className="app-shell">
-      <TopBar
-        currentTF={currentTF}
-        jumpDate={jumpDate}
-        drawMode={drawMode}
-        showDaySeparators={showDaySeparators}
-        objectsOpen={objectsOpen}
-        candleFilterMinute={candleFilterMinute}
-        renderAfterFilterMinute={renderAfterFilterMinute}
-        isPickingCandleFilter={isPickingCandleFilter}
-        onTimeframeChange={changeTimeframe}
-        onJumpDateChange={setJumpDate}
-        onJumpToDate={() => jumpToDate(jumpDate)}
-        onToggleDrawMode={toggleDrawMode}
-        onToggleDaySeparators={toggleDaySeparators}
-        onToggleObjects={() => setObjectsOpen((value) => !value)}
-        onLoadCsvFiles={loadCsvFiles}
-        onRenderAfterFilterMinuteChange={setRenderAfterFilterMinute}
-        onStepCandleFilterMinute={shiftCandleFilterMinute}
-        onStartCandleFilterPick={startCandleFilterPick}
-      />
+    <div className={isTopBarVisible ? 'app-shell' : 'app-shell topbar-hidden'}>
+      {isTopBarVisible ? (
+        <TopBar
+          currentTF={currentTF}
+          jumpDate={jumpDate}
+          drawMode={drawMode}
+          showDaySeparators={showDaySeparators}
+          objectsOpen={objectsOpen}
+          candleFilterMinute={candleFilterMinute}
+          renderAfterFilterMinute={renderAfterFilterMinute}
+          isPickingCandleFilter={isPickingCandleFilter}
+          onTimeframeChange={changeTimeframe}
+          onJumpDateChange={setJumpDate}
+          onJumpToDate={() => jumpToDate(jumpDate)}
+          onToggleDrawMode={toggleDrawMode}
+          onToggleDaySeparators={toggleDaySeparators}
+          onToggleObjects={() => setObjectsOpen((value) => !value)}
+          onLoadCsvFiles={loadCsvFiles}
+          onRenderAfterFilterMinuteChange={setRenderAfterFilterMinute}
+          onStepCandleFilterMinute={shiftCandleFilterMinute}
+          onStartCandleFilterPick={startCandleFilterPick}
+          onHideTopBar={() => setIsTopBarVisible(false)}
+        />
+      ) : null}
+
+      {!isTopBarVisible ? (
+        <div className="fullscreen-controls" aria-label="Fullscreen controls">
+          <button type="button" className="topbar-float-toggle" onClick={() => setIsTopBarVisible(true)}>
+            Show Top Bar
+          </button>
+
+          <div className="backtest-float-dock" aria-label="Backtest controls">
+            <div className="backtest-float-dock__tf" role="tablist" aria-label="Timeframes">
+              {(['m1', 'm5', 'm15', 'h1'] as const).map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  className={currentTF === tf ? 'backtest-float-dock__btn is-on' : 'backtest-float-dock__btn'}
+                  onClick={() => changeTimeframe(tf)}
+                >
+                  {tf === 'm1' ? '1m' : tf === 'm5' ? '5m' : tf === 'm15' ? '15m' : '1h'}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className={isPickingCandleFilter ? 'backtest-float-dock__btn is-on' : 'backtest-float-dock__btn'}
+              onClick={startCandleFilterPick}
+            >
+              {isPickingCandleFilter ? 'Picking... click candle' : 'Pick Candle'}
+            </button>
+
+            <span className="backtest-float-dock__selected">{candleFilterMinute ? candleFilterMinute.replace('T', ' ') : 'No candle selected'}</span>
+
+            <button
+              type="button"
+              className="backtest-float-dock__btn"
+              onClick={() => shiftCandleFilterMinute(-1)}
+              disabled={!candleFilterMinute}
+            >
+              Prev
+            </button>
+
+            <button
+              type="button"
+              className="backtest-float-dock__btn"
+              onClick={() => shiftCandleFilterMinute(1)}
+              disabled={!candleFilterMinute}
+            >
+              Next
+            </button>
+
+            <button
+              type="button"
+              className={renderAfterFilterMinute ? 'backtest-float-dock__btn is-on' : 'backtest-float-dock__btn'}
+              onClick={() => setRenderAfterFilterMinute(!renderAfterFilterMinute)}
+              disabled={!candleFilterMinute}
+            >
+              {renderAfterFilterMinute ? 'After: Show' : 'After: Hide'}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <ChartStage
         chartCanvasRef={chartCanvasRef}

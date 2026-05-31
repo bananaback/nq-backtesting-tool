@@ -20,6 +20,7 @@ type TopBarProps = {
     onRenderAfterFilterMinuteChange: (value: boolean) => void
     onStepCandleFilterMinute: (deltaMinutes: number) => void
     onStartCandleFilterPick: () => void
+    onHideTopBar: () => void
 }
 
 function getTimeframeLabel(tf: Timeframe) {
@@ -48,6 +49,7 @@ function TopBar({
     onRenderAfterFilterMinuteChange,
     onStepCandleFilterMinute,
     onStartCandleFilterPick,
+    onHideTopBar,
 }: TopBarProps) {
     return (
         <header className="topbar">
@@ -149,6 +151,10 @@ function TopBar({
                     />
                     <span>Load CSVs</span>
                 </label>
+
+                <button type="button" className="action-btn" onClick={onHideTopBar}>
+                    Hide Top Bar
+                </button>
             </div>
             <div className="topbar__hint">Drag to pan • Scroll to zoom • Drag right scale to Y-zoom</div>
         </header>
