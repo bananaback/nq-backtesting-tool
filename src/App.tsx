@@ -50,6 +50,8 @@ function App() {
     setFibSetupDrawingId,
     fibPlacementStep,
     cancelFibPlacement,
+    entryPlacementStep,
+    cancelEntryPlacement,
     updateDrawingLengthMinutes,
     updateFibDrawing,
     candleFilterMinute,
@@ -186,6 +188,8 @@ function App() {
         onSaveFibSetup={(drawingId, updates) => updateFibDrawing(drawingId, updates)}
         fibPlacementStep={fibPlacementStep}
         onCancelFibPlacement={cancelFibPlacement}
+        entryPlacementStep={entryPlacementStep}
+        onCancelEntryPlacement={cancelEntryPlacement}
       />
     </div>
   )

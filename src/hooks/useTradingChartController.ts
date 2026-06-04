@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChartRuntimeState, Drawing, DrawMenuState, OhlcState, Timeframe } from '../chartTypes'
 import { createEmptyChartData } from '../chartTypes'
-import { getTimeframeMinutes } from '../chartUtils'
+import { computeEntryStatus, getIndexByTime, getTimeframeMinutes } from '../chartUtils'
 import { drawTradingChart } from '../chartRender'
 import { resizeTradingChart } from '../chartResize'
 import { createTradingChartActions } from './useTradingChartActions'
@@ -36,6 +36,7 @@ export function useTradingChartController() {
         lastX: 0,
         lastY: 0,
         pendingFibPlacement: null,
+        pendingEntryPlacement: null,
         pendingCandleFilterPick: false,
         candleFilterMinute: '',
         renderAfterFilterMinute: true,
@@ -57,6 +58,7 @@ export function useTradingChartController() {
     const [lengthEditorDrawingId, setLengthEditorDrawingId] = useState<number | null>(null)
     const [fibSetupDrawingId, setFibSetupDrawingId] = useState<number | null>(null)
     const [fibPlacementStep, setFibPlacementStep] = useState<'pick-first' | 'pick-second' | null>(null)
+    const [entryPlacementStep, setEntryPlacementStep] = useState<'pick-entry' | 'pick-sl' | 'pick-tp' | 'pick-width' | null>(null)
     const [ohlc, setOhlc] = useState<OhlcState>({ visible: false })
     const [candleFilterMinute, setCandleFilterMinute] = useState('')
     const [renderAfterFilterMinute, setRenderAfterFilterMinute] = useState(true)
@@ -133,6 +135,7 @@ export function useTradingChartController() {
         setDrawings,
         setSelectedDrawingId,
         setFibPlacementStep,
+        setEntryPlacementStep,
         drawCanvas,
     })
 
@@ -184,10 +187,28 @@ export function useTradingChartController() {
     const updateDrawingLengthMinutes = (drawingId: number, lengthMinutes: number | null) => {
         const nextDrawings = runtimeRef.current.drawings.map((drawing) => {
             if (drawing.id !== drawingId) return drawing
-            if (drawing.type !== 'VLINE') {
-                return { ...drawing, lengthMinutes }
+
+            if (drawing.type === 'VLINE' || drawing.type === 'FIB') {
+                return drawing
             }
-            return drawing
+
+            if (drawing.type === 'ENTRY') {
+                if (lengthMinutes === null) return drawing
+                const timeframeMinutes = getTimeframeMinutes(currentTfRef.current)
+                const widthInCandles = Math.max(1, Math.round(lengthMinutes / timeframeMinutes))
+                const entryIndex = getIndexByTime(runtimeRef.current.chartData[currentTfRef.current], drawing.time)
+                const status = computeEntryStatus(
+                    runtimeRef.current.chartData[currentTfRef.current],
+                    entryIndex,
+                    widthInCandles,
+                    drawing.direction,
+                    drawing.stopLossPrice,
+                    drawing.takeProfitPrice
+                )
+                return { ...drawing, widthInCandles, lengthMinutes, status }
+            }
+
+            return { ...drawing, lengthMinutes }
         })
 
         runtimeRef.current.drawings = nextDrawings
@@ -214,6 +235,14 @@ export function useTradingChartController() {
         drawCanvas()
     }
 
+    const cancelEntryPlacement = () => {
+        runtimeRef.current.pendingEntryPlacement = null
+        setEntryPlacementStep(null)
+        drawMenuOpenRef.current = false
+        setDrawMenu(null)
+        drawCanvas()
+    }
+
     useEffect(() => bindTradingChartWindowEvents({
         chartCanvasRef,
         runtimeRef,
@@ -227,6 +256,8 @@ export function useTradingChartController() {
         setSelectedDrawingId,
         setFibPlacementStep,
         cancelFibPlacement,
+        setEntryPlacementStep,
+        cancelEntryPlacement,
         removeDrawing,
         setCandleFilterMinute,
         setRenderAfterFilterMinute,
@@ -268,6 +299,8 @@ export function useTradingChartController() {
         setFibSetupDrawingId,
         fibPlacementStep,
         cancelFibPlacement,
+        entryPlacementStep,
+        cancelEntryPlacement,
         updateDrawingLengthMinutes,
         updateFibDrawing,
         candleFilterMinute,

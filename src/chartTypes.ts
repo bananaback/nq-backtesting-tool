@@ -15,6 +15,7 @@ export type ToolType =
     | 'NWOG'
     | 'ORG_RECENT_5'
     | 'GAP_RECENT_5'
+    | 'ENTRY'
 
 export type Candle = {
     time: string
@@ -90,9 +91,33 @@ export type LineDrawing = {
     color: string
 }
 
-export type Drawing = FvgDrawing | LineDrawing | OrgDrawing | VerticalLineDrawing | FibDrawing
+export type EntryDirection = 'LONG' | 'SHORT'
 
-export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'> | Omit<FibDrawing, 'id'>
+export type EntryStatus = 'IN_PROGRESS' | 'TP_HIT' | 'SL_HIT'
+
+export type EntryDrawing = {
+    id: number
+    type: 'ENTRY'
+    time: string
+    entryPrice: number
+    stopLossPrice: number
+    takeProfitPrice: number
+    direction: EntryDirection
+    status: EntryStatus
+    widthInCandles: number
+    lengthMinutes: number | null
+}
+
+export type EntryPlacementState = {
+    firstPoint: { time: string; price: number } | null
+    secondPoint: { time: string; price: number } | null
+    thirdPoint: { time: string; price: number } | null
+    fourthPoint: { time: string; price: number } | null
+}
+
+export type Drawing = FvgDrawing | LineDrawing | OrgDrawing | VerticalLineDrawing | FibDrawing | EntryDrawing
+
+export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'> | Omit<FibDrawing, 'id'> | Omit<EntryDrawing, 'id'>
 
 export type DrawMenuState =
     | {
@@ -138,6 +163,7 @@ export const DRAW_TOOL_OPTIONS: ToolType[] = [
     'NWOG',
     'ORG_RECENT_5',
     'GAP_RECENT_5',
+    'ENTRY',
 ]
 
 export function createEmptyChartData(): Record<Timeframe, Candle[]> {
@@ -172,6 +198,7 @@ export type ChartRuntimeState = {
     lastX: number
     lastY: number
     pendingFibPlacement: FibPlacementState | null
+    pendingEntryPlacement: EntryPlacementState | null
     pendingCandleFilterPick: boolean
     candleFilterMinute: string
     renderAfterFilterMinute: boolean

@@ -34,6 +34,8 @@ type ChartStageProps = {
     onSaveFibSetup?: (drawingId: number, updates: Pick<FibDrawing, 'templateKey' | 'extendRight' | 'reverse' | 'lineStyle' | 'lineWidth' | 'levels'>) => void
     fibPlacementStep?: 'pick-first' | 'pick-second' | null
     onCancelFibPlacement?: () => void
+    entryPlacementStep?: 'pick-entry' | 'pick-sl' | 'pick-tp' | 'pick-width' | null
+    onCancelEntryPlacement?: () => void
 }
 
 function ChartStage({
@@ -64,6 +66,8 @@ function ChartStage({
     onSaveFibSetup,
     fibPlacementStep,
     onCancelFibPlacement,
+    entryPlacementStep,
+    onCancelEntryPlacement,
 }: ChartStageProps) {
     const fibSetupDrawingForModal = fibSetupDrawing && fibSetupDrawing.type === 'FIB' ? fibSetupDrawing as FibDrawing : null
 
@@ -99,6 +103,21 @@ function ChartStage({
                             </div>
                             {onCancelFibPlacement ? (
                                 <button type="button" className="fib-placement-hint__cancel" onClick={onCancelFibPlacement}>
+                                    Cancel
+                                </button>
+                            ) : null}
+                        </div>
+                    ) : null}
+                    {entryPlacementStep && !drawMenu ? (
+                        <div className="entry-placement-hint">
+                            <div className="entry-placement-hint__title">
+                                Entry
+                            </div>
+                            <div className="entry-placement-hint__text">
+                                {entryPlacementStep === 'pick-entry' ? 'Click the entry price on the chart.' : entryPlacementStep === 'pick-sl' ? 'Click the stop loss price on the chart.' : entryPlacementStep === 'pick-tp' ? 'Click the take profit price on the chart.' : 'Click to set the entry width on the chart.'}
+                            </div>
+                            {onCancelEntryPlacement ? (
+                                <button type="button" className="entry-placement-hint__cancel" onClick={onCancelEntryPlacement}>
                                     Cancel
                                 </button>
                             ) : null}

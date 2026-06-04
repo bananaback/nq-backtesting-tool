@@ -18,6 +18,7 @@ type TradingChartActionsDeps = {
     setDrawings: Dispatch<SetStateAction<Drawing[]>>
     setSelectedDrawingId?: Dispatch<SetStateAction<number | null>>
     setFibPlacementStep: Dispatch<SetStateAction<'pick-first' | 'pick-second' | null>>
+    setEntryPlacementStep: Dispatch<SetStateAction<'pick-entry' | 'pick-sl' | 'pick-tp' | 'pick-width' | null>>
     drawCanvas: () => void
 }
 
@@ -36,6 +37,7 @@ export function createTradingChartActions({
     setDrawings,
     setSelectedDrawingId,
     setFibPlacementStep,
+    setEntryPlacementStep,
     drawCanvas,
 }: TradingChartActionsDeps) {
     const handleChartMouseDown = (event: ReactMouseEvent<HTMLCanvasElement>) => {
@@ -43,7 +45,7 @@ export function createTradingChartActions({
         runtime.mouseDownX = event.clientX
         runtime.mouseDownY = event.clientY
 
-        if (!drawMenuOpenRef.current && !runtime.pendingFibPlacement) {
+        if (!drawMenuOpenRef.current && !runtime.pendingFibPlacement && !runtime.pendingEntryPlacement) {
             runtime.isDraggingChart = true
             runtime.lastX = event.clientX
             runtime.lastY = event.clientY
@@ -282,8 +284,22 @@ export function createTradingChartActions({
             return
         }
 
+        if (type === 'ENTRY') {
+            runtime.pendingFibPlacement = null
+            setFibPlacementStep(null)
+            runtime.pendingEntryPlacement = { firstPoint: null, secondPoint: null, thirdPoint: null, fourthPoint: null }
+            setEntryPlacementStep('pick-entry')
+            drawMenuOpenRef.current = false
+            setDrawMenu(null)
+            runtime.selectedCandleIndex = null
+            drawCanvas()
+            return
+        }
+
         runtime.pendingFibPlacement = null
         setFibPlacementStep(null)
+        runtime.pendingEntryPlacement = null
+        setEntryPlacementStep(null)
 
         const data = runtime.chartData[currentTfRef.current]
         const index = runtime.selectedCandleIndex

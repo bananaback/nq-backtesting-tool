@@ -1,4 +1,4 @@
-import type { Candle, FibDrawing, FibLevel, FibLineStyle, FibTemplateKey, Timeframe, ToolType } from './chartTypes'
+import type { Candle, EntryDirection, EntryDrawing, EntryStatus, FibDrawing, FibLevel, FibLineStyle, FibTemplateKey, Timeframe, ToolType } from './chartTypes'
 
 function createFibLevels(ratios: number[]) {
     return ratios.map((ratio) => ({
@@ -47,6 +47,49 @@ export function getFibLineDash(style: FibLineStyle) {
     if (style === 'dashed') return [8, 4]
     if (style === 'dotted') return [2, 4]
     return []
+}
+
+export function getEntryRR(drawing: Pick<EntryDrawing, 'entryPrice' | 'stopLossPrice' | 'takeProfitPrice'>): number {
+    const risk = Math.abs(drawing.entryPrice - drawing.stopLossPrice)
+    const reward = Math.abs(drawing.takeProfitPrice - drawing.entryPrice)
+    return risk === 0 ? 0 : reward / risk
+}
+
+export function computeEntryStatus(
+    data: Candle[],
+    entryIndex: number,
+    widthInCandles: number,
+    direction: EntryDirection,
+    stopLossPrice: number,
+    takeProfitPrice: number
+): EntryStatus {
+    if (widthInCandles <= 0 || entryIndex < 0 || entryIndex >= data.length) {
+        return 'IN_PROGRESS'
+    }
+
+    const endIndex = Math.min(entryIndex + widthInCandles, data.length - 1)
+
+    for (let i = entryIndex + 1; i <= endIndex; i++) {
+        const candle = data[i]
+
+        if (direction === 'LONG') {
+            if (candle.low <= stopLossPrice) {
+                return 'SL_HIT'
+            }
+            if (candle.high >= takeProfitPrice) {
+                return 'TP_HIT'
+            }
+        } else {
+            if (candle.high >= stopLossPrice) {
+                return 'SL_HIT'
+            }
+            if (candle.low <= takeProfitPrice) {
+                return 'TP_HIT'
+            }
+        }
+    }
+
+    return 'IN_PROGRESS'
 }
 
 export function snapPriceToCandleOHLC(candle: Candle, price: number) {
@@ -161,5 +204,6 @@ export function getToolLabel(tool: ToolType) {
     if (tool === 'NWOG') return 'New Week Opening Gap'
     if (tool === 'ORG_RECENT_5') return 'Draw 5 Most Recent ORG'
     if (tool === 'GAP_RECENT_5') return 'Draw 5 Most Recent NDOG/NWOG'
+    if (tool === 'ENTRY') return 'Entry'
     return 'Opening Range Gap'
 }

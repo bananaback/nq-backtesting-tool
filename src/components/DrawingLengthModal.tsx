@@ -9,12 +9,12 @@ type DrawingLengthModalProps = {
 
 function DrawingLengthModal({ drawing, onClose, onSave }: DrawingLengthModalProps) {
     const canEditLength = drawing.type !== 'VLINE' && drawing.type !== 'FIB'
-    const initialLengthMinutes = drawing.type === 'VLINE' || drawing.type === 'FIB' ? null : drawing.lengthMinutes
+    const initialLengthMinutes = drawing.type === 'VLINE' || drawing.type === 'FIB' || drawing.type === 'ENTRY' ? null : drawing.lengthMinutes
     const [isInfinite, setIsInfinite] = useState(initialLengthMinutes === null || initialLengthMinutes === undefined)
     const [lengthValue, setLengthValue] = useState(String(initialLengthMinutes ?? ''))
 
     useEffect(() => {
-        const nextLengthMinutes = drawing.type === 'VLINE' || drawing.type === 'FIB' ? null : drawing.lengthMinutes
+        const nextLengthMinutes = drawing.type === 'VLINE' || drawing.type === 'FIB' || drawing.type === 'ENTRY' ? null : drawing.lengthMinutes
         setIsInfinite(nextLengthMinutes === null || nextLengthMinutes === undefined)
         setLengthValue(String(nextLengthMinutes ?? ''))
     }, [drawing])

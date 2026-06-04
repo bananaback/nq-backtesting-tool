@@ -1,6 +1,6 @@
 import type { RefObject, Dispatch, SetStateAction } from 'react'
-import type { ChartRuntimeState, DrawMenuState, Timeframe } from '../chartTypes'
-import { getDefaultFibLevels, getDrawingLengthMinutes, getFibLevelPrice, getIndexByTime, getTimeframeMinutes, snapPriceToCandleOHLC } from '../chartUtils'
+import type { ChartRuntimeState, Drawing, DrawMenuState, EntryDirection, Timeframe } from '../chartTypes'
+import { computeEntryStatus, getDefaultFibLevels, getDrawingLengthMinutes, getFibLevelPrice, getIndexByTime, getTimeframeMinutes, snapPriceToCandleOHLC } from '../chartUtils'
 
 type TradingChartWindowDeps = {
     chartCanvasRef: RefObject<HTMLCanvasElement | null>
@@ -15,6 +15,8 @@ type TradingChartWindowDeps = {
     setSelectedDrawingId: Dispatch<SetStateAction<number | null>>
     setFibPlacementStep: Dispatch<SetStateAction<'pick-first' | 'pick-second' | null>>
     cancelFibPlacement: () => void
+    setEntryPlacementStep: Dispatch<SetStateAction<'pick-entry' | 'pick-sl' | 'pick-tp' | 'pick-width' | null>>
+    cancelEntryPlacement: () => void
     removeDrawing: (id: number) => void
     setCandleFilterMinute: Dispatch<SetStateAction<string>>
     setRenderAfterFilterMinute: Dispatch<SetStateAction<boolean>>
@@ -34,6 +36,8 @@ export function bindTradingChartWindowEvents({
     setSelectedDrawingId,
     setFibPlacementStep,
     cancelFibPlacement,
+    setEntryPlacementStep,
+    cancelEntryPlacement,
     removeDrawing,
     setCandleFilterMinute,
     setRenderAfterFilterMinute,
@@ -124,7 +128,25 @@ export function bindTradingChartWindowEvents({
             const hoverIndex = Math.floor(runtime.viewStart + (event.clientX - chartRect.left) / candleSpace)
 
             if (hoverIndex >= 0 && hoverIndex < data.length) {
-                const candle = data[hoverIndex]
+                // Find the last visible candle index (at or before replay cutoff)
+                let lastVisibleIndex = data.length - 1
+                if (runtime.candleFilterMinute && !runtime.renderAfterFilterMinute) {
+                    const normalized = runtime.candleFilterMinute.includes(' ')
+                        ? runtime.candleFilterMinute.replace(' ', 'T')
+                        : runtime.candleFilterMinute
+                    const cutoffEpoch = new Date(normalized).getTime()
+                    for (let i = data.length - 1; i >= 0; i--) {
+                        const candleTime = data[i].time.includes(' ') ? data[i].time.replace(' ', 'T') : data[i].time
+                        const candleEpoch = new Date(candleTime).getTime()
+                        if (candleEpoch <= cutoffEpoch) {
+                            lastVisibleIndex = i
+                            break
+                        }
+                    }
+                }
+                // Clamp hoverIndex to not exceed last visible candle
+                const clampedIndex = Math.min(hoverIndex, lastVisibleIndex)
+                const candle = data[clampedIndex]
                 const priceRange = runtime.manualMaxP - runtime.manualMinP || 1
                 const cursorPrice = runtime.manualMaxP - ((event.clientY - chartRect.top) / chartCanvas.height) * priceRange
                 const snappedPrice = snapPriceToCandleOHLC(candle, cursorPrice)
@@ -154,6 +176,9 @@ export function bindTradingChartWindowEvents({
                         setSelectedDrawingId(newId)
                         setFibPlacementStep(null)
                         cancelFibPlacement()
+                        runtime.isDraggingChart = false
+                        runtime.isDraggingAxis = false
+                        if (chartCanvas) chartCanvas.style.cursor = 'crosshair'
                         drawCanvas()
                         return
                     }
@@ -163,6 +188,96 @@ export function bindTradingChartWindowEvents({
                         templateKey: pending.templateKey,
                     }
                     setFibPlacementStep('pick-second')
+                    runtime.isDraggingChart = false
+                    runtime.isDraggingAxis = false
+                    if (chartCanvas) chartCanvas.style.cursor = 'crosshair'
+                    drawCanvas()
+                    return
+                }
+
+                if (runtime.pendingEntryPlacement) {
+                    const pending = runtime.pendingEntryPlacement
+                    if (!pending.firstPoint) {
+                        // Click 1: set entry point
+                        runtime.pendingEntryPlacement = {
+                            ...pending,
+                            firstPoint: { time: candle.time, price: snappedPrice },
+                        }
+                        setEntryPlacementStep('pick-sl')
+                        drawCanvas()
+                        return
+                    }
+                    if (!pending.secondPoint) {
+                        // Click 2: set stop loss point
+                        const entryPrice = pending.firstPoint.price
+                        const stopLossPrice = snappedPrice
+                        if (stopLossPrice === entryPrice) {
+                            window.alert('Stop loss cannot equal entry price.')
+                            return
+                        }
+                        runtime.pendingEntryPlacement = {
+                            ...pending,
+                            secondPoint: { time: candle.time, price: stopLossPrice },
+                        }
+                        setEntryPlacementStep('pick-tp')
+                        drawCanvas()
+                        return
+                    }
+                    if (!pending.thirdPoint) {
+                        // Click 3: set take profit point → transition to 'pick-width'
+                        const entryPriceClick3 = pending.firstPoint.price
+                        const stopLossPriceClick3 = pending.secondPoint.price
+                        const takeProfitPrice = snappedPrice
+                        const inferredDirectionClick3: EntryDirection = stopLossPriceClick3 < entryPriceClick3 ? 'LONG' : 'SHORT'
+                        if (inferredDirectionClick3 === 'LONG' && takeProfitPrice <= entryPriceClick3) {
+                            window.alert('LONG take profit must be above entry price.')
+                            return
+                        }
+                        if (inferredDirectionClick3 === 'SHORT' && takeProfitPrice >= entryPriceClick3) {
+                            window.alert('SHORT take profit must be below entry price.')
+                            return
+                        }
+                        runtime.pendingEntryPlacement = {
+                            ...pending,
+                            thirdPoint: { time: candle.time, price: takeProfitPrice },
+                        }
+                        setEntryPlacementStep('pick-width')
+                        drawCanvas()
+                        return
+                    }
+                    // Click 4: set width → compute status and finalize drawing
+                    const entryPrice = pending.firstPoint.price
+                    const stopLossPrice = pending.secondPoint.price
+                    const takeProfitPrice = pending.thirdPoint.price
+                    const inferredDirection: EntryDirection = stopLossPrice < entryPrice ? 'LONG' : 'SHORT'
+                    const entryIndex = getIndexByTime(data, pending.firstPoint.time)
+                    const widthInCandles = Math.max(1, hoverIndex - entryIndex)
+                    const timeframeMinutes = getTimeframeMinutes(currentTfRef.current)
+                    const lengthMinutes = widthInCandles * timeframeMinutes
+                    const status = computeEntryStatus(data, entryIndex, widthInCandles, inferredDirection, stopLossPrice, takeProfitPrice)
+                    const newId = runtime.drawingIdCounter
+                    const nextDrawing: Drawing = {
+                        id: newId,
+                        type: 'ENTRY',
+                        time: pending.firstPoint.time,
+                        entryPrice,
+                        stopLossPrice,
+                        takeProfitPrice,
+                        direction: inferredDirection,
+                        status,
+                        widthInCandles,
+                        lengthMinutes,
+                    }
+                    runtime.drawingIdCounter += 1
+                    runtime.drawings = [...runtime.drawings, nextDrawing]
+                    runtime.selectedDrawingId = newId
+                    setDrawings(runtime.drawings)
+                    setSelectedDrawingId(newId)
+                    runtime.pendingEntryPlacement = null
+                    setEntryPlacementStep(null)
+                    runtime.isDraggingChart = false
+                    runtime.isDraggingAxis = false
+                    if (chartCanvas) chartCanvas.style.cursor = 'crosshair'
                     drawCanvas()
                     return
                 }
@@ -252,6 +367,25 @@ export function bindTradingChartWindowEvents({
                     continue
                 }
 
+                if (tool.type === 'ENTRY') {
+                    const entryY = getY(tool.entryPrice)
+                    const slY = getY(tool.stopLossPrice)
+                    const tpY = getY(tool.takeProfitPrice)
+                    const effectiveWidthInCandles = tool.lengthMinutes
+                        ? Math.max(1, Math.round(tool.lengthMinutes / timeframeMinutes))
+                        : tool.widthInCandles
+                    const widthEndX = (idx + effectiveWidthInCandles - runtime.viewStart) * candleSpace + candleSpace / 2
+                    const rightX = Math.min(widthEndX, chartCanvas.width)
+                    const dyEntry = Math.abs(cursorY - entryY)
+                    const dySL = Math.abs(cursorY - slY)
+                    const dyTP = Math.abs(cursorY - tpY)
+                    if ((dyEntry <= 10 || dySL <= 10 || dyTP <= 10) && cursorX >= x - 5 && cursorX <= rightX) {
+                        bestId = tool.id
+                        break
+                    }
+                    continue
+                }
+
                 if (tool.type === 'FVG' || tool.type === 'ORG' || tool.type === 'NDOG' || tool.type === 'NWOG') {
                     const top = tool.top
                     const bot = tool.bot
@@ -322,6 +456,11 @@ export function bindTradingChartWindowEvents({
         if (event.key === 'Escape' && runtimeRef.current.pendingFibPlacement) {
             event.preventDefault()
             cancelFibPlacement()
+        }
+
+        if (event.key === 'Escape' && runtimeRef.current.pendingEntryPlacement) {
+            event.preventDefault()
+            cancelEntryPlacement()
         }
 
         if (event.key === 'Escape' && runtimeRef.current.pendingCandleFilterPick) {
