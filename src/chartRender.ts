@@ -372,6 +372,29 @@ export function drawTradingChart({
     const timeframeMinutes = getTimeframeMinutes(currentTF)
     const getY = (price: number) => chartCanvas.height - ((price - runtime.manualMinP) / priceRange) * chartCanvas.height
     const filterCutoffEpoch = runtime.candleFilterMinute ? new Date(runtime.candleFilterMinute).getTime() : Number.NaN
+    // Precompute last candle index within filter cutoff (avoids O(n) scan per drawing/mouse-move)
+    let candleFilterLastIndex = data.length - 1
+    if (runtime.candleFilterMinute && !runtime.renderAfterFilterMinute) {
+        const normalized = runtime.candleFilterMinute.includes(' ')
+            ? runtime.candleFilterMinute.replace(' ', 'T')
+            : runtime.candleFilterMinute
+        const cutoffEpochMs = new Date(normalized).getTime()
+        // Binary search: find last index where candle epoch <= cutoff
+        let lo = 0
+        let hi = data.length - 1
+        while (lo <= hi) {
+            const mid = (lo + hi) >>> 1
+            const t = data[mid].time
+            const norm = t.includes(' ') ? t.replace(' ', 'T') : t
+            const epoch = new Date(norm).getTime()
+            if (epoch <= cutoffEpochMs) {
+                candleFilterLastIndex = mid
+                lo = mid + 1
+            } else {
+                hi = mid - 1
+            }
+        }
+    }
 
     const shouldRenderCandle = (time: string) => {
         if (!Number.isFinite(filterCutoffEpoch)) return true
@@ -802,21 +825,7 @@ export function drawTradingChart({
             if (runtime.crosshairActive) {
                 let hoverDataIndex = Math.round((runtime.crosshairX - candleSpace / 2) / candleSpace + runtime.viewStart)
                 // Clamp to last visible candle
-                let lastVisibleIndex = data.length - 1
-                if (runtime.candleFilterMinute && !runtime.renderAfterFilterMinute) {
-                    const normalized = runtime.candleFilterMinute.includes(' ')
-                        ? runtime.candleFilterMinute.replace(' ', 'T')
-                        : runtime.candleFilterMinute
-                    const cutoffEpoch = new Date(normalized).getTime()
-                    for (let i = data.length - 1; i >= 0; i--) {
-                        const candleTime = data[i].time.includes(' ') ? data[i].time.replace(' ', 'T') : data[i].time
-                        const candleEpoch = new Date(candleTime).getTime()
-                        if (candleEpoch <= cutoffEpoch) {
-                            lastVisibleIndex = i
-                            break
-                        }
-                    }
-                }
+                let lastVisibleIndex = candleFilterLastIndex
                 hoverDataIndex = Math.min(hoverDataIndex, lastVisibleIndex)
                 if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
                     const hoverCandle = data[hoverDataIndex]
@@ -860,21 +869,7 @@ export function drawTradingChart({
                 if (runtime.crosshairActive) {
                     let hoverDataIndex = Math.round((runtime.crosshairX - candleSpace / 2) / candleSpace + runtime.viewStart)
                     // Clamp to last visible candle
-                    let lastVisibleIndex = data.length - 1
-                    if (runtime.candleFilterMinute && !runtime.renderAfterFilterMinute) {
-                        const normalized = runtime.candleFilterMinute.includes(' ')
-                            ? runtime.candleFilterMinute.replace(' ', 'T')
-                            : runtime.candleFilterMinute
-                        const cutoffEpoch = new Date(normalized).getTime()
-                        for (let i = data.length - 1; i >= 0; i--) {
-                            const candleTime = data[i].time.includes(' ') ? data[i].time.replace(' ', 'T') : data[i].time
-                            const candleEpoch = new Date(candleTime).getTime()
-                            if (candleEpoch <= cutoffEpoch) {
-                                lastVisibleIndex = i
-                                break
-                            }
-                        }
-                    }
+                    let lastVisibleIndex = candleFilterLastIndex
                     hoverDataIndex = Math.min(hoverDataIndex, lastVisibleIndex)
                     if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
                         const hoverCandle = data[hoverDataIndex]
@@ -966,21 +961,7 @@ export function drawTradingChart({
                 if (runtime.crosshairActive) {
                     let hoverDataIndex = Math.round((runtime.crosshairX - candleSpace / 2) / candleSpace + runtime.viewStart)
                     // Clamp to last visible candle
-                    let lastVisibleIndex = data.length - 1
-                    if (runtime.candleFilterMinute && !runtime.renderAfterFilterMinute) {
-                        const normalized = runtime.candleFilterMinute.includes(' ')
-                            ? runtime.candleFilterMinute.replace(' ', 'T')
-                            : runtime.candleFilterMinute
-                        const cutoffEpoch = new Date(normalized).getTime()
-                        for (let i = data.length - 1; i >= 0; i--) {
-                            const candleTime = data[i].time.includes(' ') ? data[i].time.replace(' ', 'T') : data[i].time
-                            const candleEpoch = new Date(candleTime).getTime()
-                            if (candleEpoch <= cutoffEpoch) {
-                                lastVisibleIndex = i
-                                break
-                            }
-                        }
-                    }
+                    let lastVisibleIndex = candleFilterLastIndex
                     hoverDataIndex = Math.min(hoverDataIndex, lastVisibleIndex)
                     if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
                         const hoverCandle = data[hoverDataIndex]

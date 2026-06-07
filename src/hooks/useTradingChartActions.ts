@@ -1,6 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction, MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from 'react'
 import type { Candle, ChartRuntimeState, Drawing, DrawingDraft, DrawMenuState, Timeframe, ToolType } from '../chartTypes'
-import { clamp, getFirstIndexByDate, getIndexByTime, getPreviousDateString, parseCsvText } from '../chartUtils'
+import { clamp, getFirstIndexByDate, getIndexByTime, getPreviousDateString, parseCsvText, roundTimeToTimeframe } from '../chartUtils'
 import { createLoadCsvFiles } from './loadTradingChartCsvFiles'
 
 type TradingChartActionsDeps = {
@@ -184,6 +184,8 @@ export function createTradingChartActions({
             return false
         }
 
+        const roundedTimeStr = roundTimeToTimeframe(timeStr, currentTF)
+
         // Find the first candle for this date, then scan linearly for the specific time.
         // Uses the same date-first approach as jumpToDate (via getFirstIndexByDate) rather
         // than binary search on exact time, because binary search is fragile with unsorted
@@ -199,18 +201,18 @@ export function createTradingChartActions({
             return -1
         }
 
-        let index = findIndexByDateAndTime(data, dateStr, timeStr)
+        let index = findIndexByDateAndTime(data, dateStr, roundedTimeStr)
 
         if (index < 0 && runtime.sourceFiles[currentTF]) {
             const refreshedText = await runtime.sourceFiles[currentTF]!.text()
             const refreshedData = parseCsvText(refreshedText)
             runtime.chartData[currentTF] = refreshedData
             data = refreshedData
-            index = findIndexByDateAndTime(data, dateStr, timeStr)
+            index = findIndexByDateAndTime(data, dateStr, roundedTimeStr)
         }
 
         if (index < 0) {
-            window.alert(`No data found for ${dateStr} at ${timeStr} on the current timeframe.`)
+            window.alert(`No data found for ${dateStr} at ${roundedTimeStr} on the current timeframe.`)
             return false
         }
 
@@ -219,7 +221,7 @@ export function createTradingChartActions({
         runtime.viewStart = clamp(index - visibleCount / 2, 0, Math.max(data.length - visibleCount, 0))
         runtime.isAutoScaled = true
 
-        const filterValue = `${dateStr}T${timeStr}`
+        const filterValue = `${dateStr}T${roundedTimeStr}`
         runtime.candleFilterMinute = filterValue
         runtime.renderAfterFilterMinute = false
         setJumpDate(dateStr)

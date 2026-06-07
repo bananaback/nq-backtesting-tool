@@ -180,6 +180,26 @@ export function getTimeframeMinutes(tf: Timeframe) {
     return 60
 }
 
+export function roundTimeToTimeframe(timeStr: string, tf: Timeframe): string {
+    /** Floors HH:MM time to nearest multiple of timeframe interval in minutes.
+    Args:
+        timeStr: Time in "HH:MM" 24-hour format (e.g. "09:32", "14:00").
+        tf: Timeframe value — 'm1', 'm5', 'm15', or 'h1'.
+
+    Returns:
+        Floored time in "HH:MM" format. For 'm1' returns input unchanged.
+    */
+    const [hoursStr, minutesStr] = timeStr.split(':')
+    const hours = Number.parseInt(hoursStr, 10)
+    const minutes = Number.parseInt(minutesStr, 10)
+    const totalMinutes = hours * 60 + minutes
+    const interval = getTimeframeMinutes(tf)
+    const flooredMinutes = Math.floor(totalMinutes / interval) * interval
+    const flooredHours = Math.floor(flooredMinutes / 60)
+    const flooredMins = flooredMinutes % 60
+    return `${String(flooredHours).padStart(2, '0')}:${String(flooredMins).padStart(2, '0')}`
+}
+
 export function getDrawingLengthMinutes(lengthMinutes?: number | null) {
     return lengthMinutes === null || lengthMinutes === undefined ? null : Math.max(0, lengthMinutes)
 }

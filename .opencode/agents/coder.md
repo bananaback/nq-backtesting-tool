@@ -57,7 +57,7 @@ If you hit an error you cannot resolve, stop. Do not keep trying variations. Esc
 
 The reviewer is the only authority that can close your task. You call the reviewer after every implementation and after every fix, without exception.
 
-**Call the reviewer with this prompt — fill in every field, do not abbreviate:**
+**Use the `task` tool to invoke the `reviewer` agent. Do not compose this prompt and stop — fire the tool. Fill in every field, do not abbreviate:**
 
 ```
 Task [ID]: [one-line description]
@@ -83,7 +83,9 @@ Check:
 7. Every parameter and return type is annotated — no bare `dict`/`list`, no missing `->`, no unjustified `Any`
 ```
 
-**After the reviewer responds:**
+**After the reviewer tool call returns a response:**
+
+Before reading the verdict, confirm: is there a reviewer response in your context? If the `task` tool was not called, the loop is not complete — go back and call it now.
 
 - `Verdict: PASS` → exit the loop. Write your report and return it to the manager.
 - `Verdict: NEEDS FIXES` → fix every CRITICAL and WARN finding. Validate again. Call the reviewer again. Do not skip the reviewer call after fixing.
@@ -93,7 +95,10 @@ Check:
 
 ## Report
 
-Send this to the manager when the loop exits.
+**Gate check — do this before writing anything below:**
+Scan your context. Find the literal string `Verdict: PASS` from a reviewer response. If it is not there, you are not done. Return to the review loop and invoke the reviewer via `task`.
+
+Send this to the manager only after the gate check passes.
 
 ```
 Task [ID]: [description]
