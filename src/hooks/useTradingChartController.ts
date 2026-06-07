@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChartRuntimeState, Drawing, DrawMenuState, OhlcState, Timeframe } from '../chartTypes'
+import type { Dispatch, RefObject, SetStateAction } from 'react'
+import type { ChartRuntimeState, Drawing, DrawMenuState, OhlcState, Timeframe, ToolType } from '../chartTypes'
+import type { MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from 'react'
 import { createEmptyChartData } from '../chartTypes'
 import { computeEntryStatus, getIndexByTime, getTimeframeMinutes } from '../chartUtils'
 import { drawTradingChart } from '../chartRender'
@@ -7,7 +9,66 @@ import { resizeTradingChart } from '../chartResize'
 import { createTradingChartActions } from './useTradingChartActions'
 import { bindTradingChartWindowEvents } from './useTradingChartWindow'
 
-export function useTradingChartController() {
+type UseTradingChartControllerReturn = {
+    chartCanvasRef: RefObject<HTMLCanvasElement | null>
+    yAxisCanvasRef: RefObject<HTMLCanvasElement | null>
+    xAxisCanvasRef: RefObject<HTMLCanvasElement | null>
+    chartStageRef: RefObject<HTMLDivElement | null>
+    currentTF: Timeframe
+    jumpDate: string
+    drawMode: boolean
+    showDaySeparators: boolean
+    objectsOpen: boolean
+    drawMenu: DrawMenuState
+    drawings: Drawing[]
+    ohlc: OhlcState
+    changeTimeframe: (tf: Timeframe) => void
+    jumpToDate: (date: string) => void
+    setJumpDate: Dispatch<SetStateAction<string>>
+    toggleDrawMode: () => void
+    toggleDaySeparators: () => void
+    setObjectsOpen: Dispatch<SetStateAction<boolean>>
+    loadCsvFiles: (files: FileList | null) => void
+    removeDrawing: (id: number) => void
+    createDrawing: (type: ToolType) => void
+    handleChartMouseDown: (event: ReactMouseEvent<HTMLCanvasElement>) => void
+    handleChartWheel: (event: ReactWheelEvent<HTMLCanvasElement>) => void
+    handleChartMouseLeave: () => void
+    handleYAxisMouseDown: (event: ReactMouseEvent<HTMLCanvasElement>) => void
+    handleYAxisDoubleClick: () => void
+    selectedDrawingId: number | null
+    setSelectedDrawingId: Dispatch<SetStateAction<number | null>>
+    lengthEditorDrawingId: number | null
+    setLengthEditorDrawingId: Dispatch<SetStateAction<number | null>>
+    fibSetupDrawingId: number | null
+    setFibSetupDrawingId: Dispatch<SetStateAction<number | null>>
+    fibPlacementStep: 'pick-first' | 'pick-second' | null
+    cancelFibPlacement: () => void
+    entryPlacementStep: 'pick-entry' | 'pick-sl' | 'pick-tp' | 'pick-width' | null
+    cancelEntryPlacement: () => void
+    updateDrawingLengthMinutes: (drawingId: number, lengthMinutes: number | null) => void
+    updateFibDrawing: (drawingId: number, updates: Partial<Extract<Drawing, { type: 'FIB' }>>) => void
+    candleFilterMinute: string
+    setCandleFilterMinute: Dispatch<SetStateAction<string>>
+    renderAfterFilterMinute: boolean
+    setRenderAfterFilterMinute: Dispatch<SetStateAction<boolean>>
+    shiftCandleFilterMinute: (deltaMinutes: number) => void
+    isPickingCandleFilter: boolean
+    startCandleFilterPick: () => void
+    addBacktestSection: (dateStr: string, timeStr: string) => Promise<boolean>
+    exitFullscreenRef: RefObject<(() => void) | null>
+}
+
+/** Main trading chart controller hook.
+ *
+ * Manages canvas refs, chart state, drawing/placement state, and return an
+ * object of refs, state values, setters, and action handlers for composing
+ * the trading chart UI.
+ *
+ * Returns:
+ *     Controller object with refs, state, setters, and action handlers.
+ */
+export function useTradingChartController(): UseTradingChartControllerReturn {
     const chartCanvasRef = useRef<HTMLCanvasElement | null>(null)
     const yAxisCanvasRef = useRef<HTMLCanvasElement | null>(null)
     const xAxisCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -46,6 +107,7 @@ export function useTradingChartController() {
     const drawModeRef = useRef(false)
     const drawMenuOpenRef = useRef(false)
     const showDaySeparatorsRef = useRef(true)
+    const exitFullscreenRef = useRef<(() => void) | null>(null)
 
     const [currentTF, setCurrentTF] = useState<Timeframe>('m1')
     const [jumpDate, setJumpDate] = useState('')
@@ -265,6 +327,8 @@ export function useTradingChartController() {
         setCandleFilterMinute,
         setRenderAfterFilterMinute,
         setIsPickingCandleFilter,
+        toggleDrawMode,
+        exitFullscreenRef,
     }), [])
 
     return {
@@ -314,5 +378,6 @@ export function useTradingChartController() {
         isPickingCandleFilter,
         startCandleFilterPick,
         addBacktestSection,
+        exitFullscreenRef,
     }
 }

@@ -185,3 +185,96 @@ const handleSectionSubmit = async (name: string, date: string, time: string): Pr
 - Empty name → uses default ("Section N")
 - Empty date/time → alert before submit
 - Data reload needed → handled (same pattern as jumpToDate)
+
+---
+
+# Plan: ESC Exit Fullscreen + D Toggle Drawing Mode
+
+## Overview
+Add two keyboard shortcuts: ESC exits fullscreen mode (as fallback after existing cancel actions), D toggles drawing mode on/off.
+
+## Task Index
+
+| Task | File | Description |
+|------|------|-------------|
+| T1 | `src/hooks/useTradingChartWindow.ts` | Extend handleKeyDown with ESC-fullscreen fallback + D-toggle |
+| T2 | `src/hooks/useTradingChartController.ts` | Create exitFullscreenRef, wire new deps to bind call |
+| T3 | `src/App.tsx` | Set exitFullscreenRef.current on mount |
+
+## Dependency Graph
+
+```
+T1 → T2 → T3
+```
+
+## Phase Map
+
+- Phase 1: T1
+- Phase 2: T2
+- Phase 3: T3
+
+---
+
+## T1: Extend handleKeyDown with ESC-fullscreen fallback + D-toggle
+
+**File:** `src/hooks/useTradingChartWindow.ts`
+
+**Type changes — add to `TradingChartWindowDeps`:**
+```ts
+toggleDrawMode: () => void
+exitFullscreenRef: RefObject<(() => void) | null>
+```
+
+**Function params:** Add `toggleDrawMode` and `exitFullscreenRef` to destructured params of `bindTradingChartWindowEvents`.
+
+**handleKeyDown ESC block change:**
+Replace three standalone ESC `if` blocks with single `if (event.key === 'Escape')` block:
+1. Local `escapeHandled: boolean = false`
+2. Three inner `if` checks (pendingFibPlacement, pendingEntryPlacement, pendingCandleFilterPick) — each sets `escapeHandled = true`
+3. Final `if (!escapeHandled)` calls `exitFullscreenRef.current?.()`
+
+**Add D key handler after ESC block:**
+```ts
+if ((event.key === 'd' || event.key === 'D') && !event.ctrlKey && !event.altKey && !event.metaKey)
+```
+→ `event.preventDefault()` then `toggleDrawMode()`
+
+**Input contract:**
+- `toggleDrawMode`: from `createTradingChartActions`. Reads refs internally, mount-time capture safe.
+- `exitFullscreenRef`: RefObject with `.current` = null or `() => void`. Caller sets before keydown fires.
+
+**Side effects:**
+- ESC with active placement: same as current (cancel). No change.
+- ESC with no active placement: calls `exitFullscreenRef.current?.()` → exits fullscreen.
+- D/d (no modifiers): calls `toggleDrawMode()` → toggles draw mode.
+- No side effects when INPUT/TEXTAREA/SELECT focused (existing guard).
+
+---
+
+## T2: Create exitFullscreenRef, wire new deps to bind call
+
+**File:** `src/hooks/useTradingChartController.ts`
+
+**Changes:**
+1. After line 48 (existing ref declarations): add `const exitFullscreenRef = useRef<(() => void) | null>(null)`
+2. In `useEffect` bind call (lines 249-268): add `toggleDrawMode` and `exitFullscreenRef` to deps object
+3. In return object (lines 270-317): add `exitFullscreenRef`
+
+`toggleDrawMode` already in scope from `createTradingChartActions` (line 113).
+
+---
+
+## T3: Set exitFullscreenRef.current in App
+
+**File:** `src/App.tsx`
+
+**Changes:**
+1. Destructure `exitFullscreenRef` from `useTradingChartController()` return
+2. Add useEffect (empty deps `[]`):
+```ts
+useEffect(() => {
+    exitFullscreenRef.current = () => setIsTopBarVisible(true)
+}, [exitFullscreenRef, setIsTopBarVisible])
+```
+
+No cleanup needed. `setIsTopBarVisible` is stable React setState.

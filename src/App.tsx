@@ -63,7 +63,12 @@ function App() {
     isPickingCandleFilter,
     startCandleFilterPick,
     addBacktestSection,
+    exitFullscreenRef,
   } = useTradingChartController()
+
+  useEffect(() => {
+    exitFullscreenRef.current = () => setIsTopBarVisible(true)
+  }, [exitFullscreenRef, setIsTopBarVisible])
 
   const lengthEditorDrawing = drawings.find((drawing) => drawing.id === lengthEditorDrawingId) ?? null
   const fibSetupDrawing = drawings.find((drawing) => drawing.id === fibSetupDrawingId) ?? null

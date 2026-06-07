@@ -1,18 +1,18 @@
 ## Focus
-All phases complete.
+Phase 3: Set exitFullscreenRef.current in App
 
 ## Phases
-- [x] Phase 1 (parallel): T1, T2
-- [x] Phase 2 (parallel): T3, T4
-- [x] Phase 3: T5
+- [x] Phase 1: T1 (useTradingChartWindow.ts)
+- [x] Phase 2: T2 (useTradingChartController.ts)
+- [x] Phase 3: T3 (App.tsx)
 
 ## Blockers
 None
 
 ## Decisions
-- Modal uses existing .modal-* CSS classes — no new CSS needed
-- Candle filter format uses T-separator (YYYY-MM-DDTHH:MM) matching existing state
-- getIndexByTime exact-match check required (returns closest-left on miss, not -1)
+- ESC uses fallback pattern: cancel placements first, exit fullscreen only if nothing to cancel
+- D key requires no modifier keys (Ctrl/Alt/Meta) to avoid browser shortcut conflicts
+- exitFullscreenRef pattern needed because fullscreen state lives in App.tsx, outside the hook boundary
 
 ## Next
-Done.
+All tasks complete. Synthesize for user.

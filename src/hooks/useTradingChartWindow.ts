@@ -21,8 +21,41 @@ type TradingChartWindowDeps = {
     setCandleFilterMinute: Dispatch<SetStateAction<string>>
     setRenderAfterFilterMinute: Dispatch<SetStateAction<boolean>>
     setIsPickingCandleFilter: Dispatch<SetStateAction<boolean>>
+    toggleDrawMode: () => void
+    exitFullscreenRef: RefObject<(() => void) | null>
 }
 
+/** Register window-level event listeners for the trading chart canvas.
+ *
+ * Binds resize, mouse, and keyboard events to enable chart interaction:
+ * panning, zooming, drawing placement, draw mode toggle, fullscreen exit,
+ * and candle filter picking.
+ *
+ * Args:
+ *     chartCanvasRef: Ref to the chart canvas element.
+ *     runtimeRef: Ref to the shared chart runtime state.
+ *     currentTfRef: Ref to the current timeframe.
+ *     drawModeRef: Ref indicating whether draw mode is active.
+ *     drawMenuOpenRef: Ref indicating whether the draw menu is open.
+ *     setDrawMenu: Setter for draw menu state.
+ *     setDrawings: Setter for drawings array.
+ *     drawCanvas: Function to re-render the chart.
+ *     resizeCanvas: Function to resize the canvas.
+ *     setSelectedDrawingId: Setter for selected drawing ID.
+ *     setFibPlacementStep: Setter for Fibonacci placement step.
+ *     cancelFibPlacement: Cancels current Fibonacci placement.
+ *     setEntryPlacementStep: Setter for entry placement step.
+ *     cancelEntryPlacement: Cancels current entry placement.
+ *     removeDrawing: Removes a drawing by ID.
+ *     setCandleFilterMinute: Setter for candle filter minute.
+ *     setRenderAfterFilterMinute: Setter for render-after-filter flag.
+ *     setIsPickingCandleFilter: Setter for candle filter picking state.
+ *     toggleDrawMode: Toggles draw mode on/off.
+ *     exitFullscreenRef: Ref with function to exit fullscreen.
+ *
+ * Returns:
+ *     Cleanup function that removes all registered window event listeners.
+ */
 export function bindTradingChartWindowEvents({
     chartCanvasRef,
     runtimeRef,
@@ -42,7 +75,10 @@ export function bindTradingChartWindowEvents({
     setCandleFilterMinute,
     setRenderAfterFilterMinute,
     setIsPickingCandleFilter,
-}: TradingChartWindowDeps) {
+    toggleDrawMode,
+    exitFullscreenRef,
+}: TradingChartWindowDeps): () => void {
+    resizeCanvas()
     resizeCanvas()
 
     const handleResize = () => resizeCanvas()
@@ -453,21 +489,35 @@ export function bindTradingChartWindowEvents({
             setSelectedDrawingId(null)
         }
 
-        if (event.key === 'Escape' && runtimeRef.current.pendingFibPlacement) {
+        if (event.key === 'Escape') {
             event.preventDefault()
-            cancelFibPlacement()
+            let escapeHandled = false
+
+            if (runtimeRef.current.pendingFibPlacement) {
+                cancelFibPlacement()
+                escapeHandled = true
+            }
+
+            if (runtimeRef.current.pendingEntryPlacement) {
+                cancelEntryPlacement()
+                escapeHandled = true
+            }
+
+            if (runtimeRef.current.pendingCandleFilterPick) {
+                runtimeRef.current.pendingCandleFilterPick = false
+                setIsPickingCandleFilter(false)
+                drawCanvas()
+                escapeHandled = true
+            }
+
+            if (!escapeHandled) {
+                exitFullscreenRef.current?.()
+            }
         }
 
-        if (event.key === 'Escape' && runtimeRef.current.pendingEntryPlacement) {
+        if ((event.key === 'd' || event.key === 'D') && !event.ctrlKey && !event.altKey && !event.metaKey) {
             event.preventDefault()
-            cancelEntryPlacement()
-        }
-
-        if (event.key === 'Escape' && runtimeRef.current.pendingCandleFilterPick) {
-            event.preventDefault()
-            runtimeRef.current.pendingCandleFilterPick = false
-            setIsPickingCandleFilter(false)
-            drawCanvas()
+            toggleDrawMode()
         }
     }
 
