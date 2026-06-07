@@ -469,7 +469,9 @@ export function createTradingChartActions({
                 window.alert('Cannot calculate FVG on boundary candles.')
             }
         } else if (type === 'OB') {
-            newDrawing = { type: 'OB', time: candle.time, price: candle.open, lengthMinutes: null, color: '#3b82f6' }
+            const isBullishCandle = candle.close > candle.open
+            const obColor = isBullishCandle ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)'
+            newDrawing = { type: 'OB', time: candle.time, top: Math.max(candle.open, candle.close), bot: Math.min(candle.open, candle.close), lengthMinutes: 240, color: obColor }
         } else if (type === 'VLINE') {
             // vertical line at selected candle time
             if (!candle) {
@@ -493,9 +495,9 @@ export function createTradingChartActions({
                 window.alert('Cannot calculate FVG on boundary candles.')
             }
         } else if (type === 'EQH' || type === 'SH') {
-            newDrawing = { type, time: candle.time, price: candle.high, lengthMinutes: null, color: '#ef4444' }
+            newDrawing = { type, time: candle.time, price: candle.high, lengthMinutes: null, color: '#000000' }
         } else if (type === 'EQL' || type === 'SL') {
-            newDrawing = { type, time: candle.time, price: candle.low, lengthMinutes: null, color: '#22c55e' }
+            newDrawing = { type, time: candle.time, price: candle.low, lengthMinutes: null, color: '#000000' }
         } else if (type === 'ORG') {
             const m1Data = runtime.chartData.m1
             if (!m1Data || m1Data.length === 0) {
@@ -547,6 +549,8 @@ export function createTradingChartActions({
             const newId = runtime.drawingIdCounter - 1
             runtime.selectedDrawingId = newId
             setSelectedDrawingId && setSelectedDrawingId(newId)
+            drawModeRef.current = false
+            setDrawMode(false)
         }
 
         runtime.selectedCandleIndex = null

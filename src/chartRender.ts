@@ -725,21 +725,57 @@ export function drawTradingChart({
             return
         }
 
+        if (tool.type === 'OB') {
+            const yTop = getY(tool.top)
+            const yBot = getY(tool.bot)
+            const height = Math.abs(yBot - yTop)
+            const yDraw = Math.min(yTop, yBot)
+            const rectWidth = Math.max(1, (tool.lengthMinutes / timeframeMinutes) * candleSpace)
+
+            ctx.fillStyle = tool.color
+            ctx.fillRect(x, yDraw, rectWidth, height)
+            ctx.strokeStyle = '#000000'
+            ctx.lineWidth = 1
+            ctx.strokeRect(x, yDraw, rectWidth, height)
+            if (isSelected) {
+                ctx.save()
+                ctx.strokeStyle = '#6d28d9'
+                ctx.lineWidth = 1
+                ctx.setLineDash([6, 3])
+                ctx.strokeRect(x - 2, yDraw - 2, rectWidth + 4, height + 4)
+                ctx.restore()
+            }
+            return
+        }
+
         if ('price' in tool) {
             const y = getY(tool.price)
             const lengthMinutes = getDrawingLengthMinutes(tool.lengthMinutes)
-            const rectWidth = lengthMinutes === null ? chartCanvas.width - x : Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
+            let endX: number
+            if (lengthMinutes !== null) {
+                const rectWidth = Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
+                endX = x + rectWidth
+            } else {
+                // Scan forward for first candle crossing this price level
+                let crossCandleIdx = -1
+                for (let i = index + 1; i <= endIdx; i++) {
+                    if (data[i].low <= tool.price && tool.price <= data[i].high) {
+                        crossCandleIdx = i
+                        break
+                    }
+                }
+                if (crossCandleIdx !== -1) {
+                    endX = (crossCandleIdx - runtime.viewStart) * candleSpace + candleSpace / 2
+                } else {
+                    endX = (endIdx - runtime.viewStart) * candleSpace + candleSpace / 2
+                }
+            }
             ctx.beginPath()
             ctx.moveTo(x, y)
-            ctx.lineTo(x + rectWidth, y)
+            ctx.lineTo(endX, y)
             ctx.strokeStyle = isSelected ? '#6d28d9' : tool.color
-            ctx.lineWidth = isSelected ? 3 : 2
+            ctx.lineWidth = isSelected ? 3 : 1
             ctx.stroke()
-            if (!isSelected) {
-                ctx.fillStyle = tool.color
-                ctx.font = 'bold 10px sans-serif'
-                ctx.fillText(tool.type, x + 4, y - 4)
-            }
         }
     })
 

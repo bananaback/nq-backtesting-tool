@@ -257,6 +257,11 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
                 return drawing
             }
 
+            if (drawing.type === 'OB') {
+                if (lengthMinutes === null) return drawing
+                return { ...drawing, lengthMinutes }
+            }
+
             if (drawing.type === 'ENTRY') {
                 if (lengthMinutes === null) return drawing
                 const timeframeMinutes = getTimeframeMinutes(currentTfRef.current)

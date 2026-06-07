@@ -219,6 +219,7 @@ export function bindTradingChartWindowEvents({
                         setSelectedDrawingId(newId)
                         setFibPlacementStep(null)
                         cancelFibPlacement()
+                        toggleDrawMode()
                         runtime.isDraggingChart = false
                         runtime.isDraggingAxis = false
                         if (chartCanvas) chartCanvas.style.cursor = 'crosshair'
@@ -318,6 +319,7 @@ export function bindTradingChartWindowEvents({
                     setSelectedDrawingId(newId)
                     runtime.pendingEntryPlacement = null
                     setEntryPlacementStep(null)
+                    toggleDrawMode()
                     runtime.isDraggingChart = false
                     runtime.isDraggingAxis = false
                     if (chartCanvas) chartCanvas.style.cursor = 'crosshair'

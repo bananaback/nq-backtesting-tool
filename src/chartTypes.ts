@@ -84,10 +84,20 @@ export type OrgDrawing = {
 
 export type LineDrawing = {
     id: number
-    type: 'OB' | 'EQH' | 'EQL' | 'SH' | 'SL'
+    type: 'EQH' | 'EQL' | 'SH' | 'SL'
     time: string
     price: number
     lengthMinutes?: number | null
+    color: string
+}
+
+export type ObDrawing = {
+    id: number
+    type: 'OB'
+    time: string
+    top: number
+    bot: number
+    lengthMinutes: number
     color: string
 }
 
@@ -115,9 +125,9 @@ export type EntryPlacementState = {
     fourthPoint: { time: string; price: number } | null
 }
 
-export type Drawing = FvgDrawing | LineDrawing | OrgDrawing | VerticalLineDrawing | FibDrawing | EntryDrawing
+export type Drawing = FvgDrawing | LineDrawing | ObDrawing | OrgDrawing | VerticalLineDrawing | FibDrawing | EntryDrawing
 
-export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'> | Omit<FibDrawing, 'id'> | Omit<EntryDrawing, 'id'>
+export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<ObDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'> | Omit<FibDrawing, 'id'> | Omit<EntryDrawing, 'id'>
 
 export type DrawMenuState =
     | {
