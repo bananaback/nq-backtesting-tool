@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react'
 
 function App() {
   const [isTopBarVisible, setIsTopBarVisible] = useState(true)
+  const [isSectionModalOpen, setIsSectionModalOpen] = useState(false)
+  const [sectionCounter, setSectionCounter] = useState(0)
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -60,10 +62,21 @@ function App() {
     shiftCandleFilterMinute,
     isPickingCandleFilter,
     startCandleFilterPick,
+    addBacktestSection,
   } = useTradingChartController()
 
   const lengthEditorDrawing = drawings.find((drawing) => drawing.id === lengthEditorDrawingId) ?? null
   const fibSetupDrawing = drawings.find((drawing) => drawing.id === fibSetupDrawingId) ?? null
+
+  const handleSectionSubmit = async (_name: string, date: string, time: string): Promise<boolean> => {
+    const success = await addBacktestSection(date, time)
+    if (success) {
+      setSectionCounter(prev => prev + 1)
+    }
+    return success
+  }
+
+  const sectionDefaultName = `Section ${sectionCounter + 1}`
 
   return (
     <div className={isTopBarVisible ? 'app-shell' : 'app-shell topbar-hidden'}>
@@ -88,6 +101,11 @@ function App() {
           onStepCandleFilterMinute={shiftCandleFilterMinute}
           onStartCandleFilterPick={startCandleFilterPick}
           onHideTopBar={() => setIsTopBarVisible(false)}
+          isSectionModalOpen={isSectionModalOpen}
+          onOpenSectionModal={() => setIsSectionModalOpen(true)}
+          onCloseSectionModal={() => setIsSectionModalOpen(false)}
+          onSubmitSection={handleSectionSubmit}
+          sectionDefaultName={sectionDefaultName}
         />
       ) : null}
 

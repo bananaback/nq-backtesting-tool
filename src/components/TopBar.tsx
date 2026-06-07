@@ -1,5 +1,6 @@
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, JSX } from 'react'
 import { TIMEFRAMES, type Timeframe } from '../chartTypes'
+import BacktestSectionModal from './BacktestSectionModal'
 
 type TopBarProps = {
     currentTF: Timeframe
@@ -10,6 +11,11 @@ type TopBarProps = {
     candleFilterMinute: string
     renderAfterFilterMinute: boolean
     isPickingCandleFilter: boolean
+    isSectionModalOpen: boolean
+    onOpenSectionModal: () => void
+    onCloseSectionModal: () => void
+    onSubmitSection: (name: string, date: string, time: string) => Promise<boolean>
+    sectionDefaultName: string
     onTimeframeChange: (nextTF: Timeframe) => void
     onJumpDateChange: (value: string) => void
     onJumpToDate: () => void
@@ -30,6 +36,10 @@ function getTimeframeLabel(tf: Timeframe) {
     return '1h'
 }
 
+/**
+ * Renders the top bar with timeframe controls, action buttons, date jump,
+ * candle filter, CSV load, and the backtest section modal.
+ */
 function TopBar({
     currentTF,
     jumpDate,
@@ -39,6 +49,11 @@ function TopBar({
     candleFilterMinute,
     renderAfterFilterMinute,
     isPickingCandleFilter,
+    isSectionModalOpen,
+    onOpenSectionModal,
+    onCloseSectionModal,
+    onSubmitSection,
+    sectionDefaultName,
     onTimeframeChange,
     onJumpDateChange,
     onJumpToDate,
@@ -50,10 +65,11 @@ function TopBar({
     onStepCandleFilterMinute,
     onStartCandleFilterPick,
     onHideTopBar,
-}: TopBarProps) {
+}: TopBarProps): JSX.Element {
     return (
-        <header className="topbar">
-            <div className="topbar__group">
+        <>
+            <header className="topbar">
+                <div className="topbar__group">
                 <div className="brand-block">
                     <div className="brand-title">TradingView MVP</div>
                     <div className="brand-subtitle">Unified objects and multi-timeframe canvas</div>
@@ -81,6 +97,9 @@ function TopBar({
                     </button>
                     <button type="button" className="action-btn" onClick={onToggleObjects}>
                         {objectsOpen ? '📋 Objects: OPEN' : '📋 Objects'}
+                    </button>
+                    <button type="button" className="action-btn" onClick={onOpenSectionModal}>
+                        📌 New Section
                     </button>
                 </div>
 
@@ -158,6 +177,14 @@ function TopBar({
             </div>
             <div className="topbar__hint">Drag to pan • Scroll to zoom • Drag right scale to Y-zoom</div>
         </header>
+        {isSectionModalOpen ? (
+            <BacktestSectionModal
+                defaultName={sectionDefaultName}
+                onClose={onCloseSectionModal}
+                onSubmit={onSubmitSection}
+            />
+        ) : null}
+    </>
     )
 }
 

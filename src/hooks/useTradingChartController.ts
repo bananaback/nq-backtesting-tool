@@ -120,6 +120,7 @@ export function useTradingChartController() {
         handleChartMouseLeave,
         handleYAxisMouseDown,
         handleYAxisDoubleClick,
+        addBacktestSection,
     } = createTradingChartActions({
         chartCanvasRef,
         runtimeRef,
@@ -136,6 +137,8 @@ export function useTradingChartController() {
         setSelectedDrawingId,
         setFibPlacementStep,
         setEntryPlacementStep,
+        setCandleFilterMinute,
+        setRenderAfterFilterMinute,
         drawCanvas,
     })
 
@@ -310,5 +313,6 @@ export function useTradingChartController() {
         shiftCandleFilterMinute,
         isPickingCandleFilter,
         startCandleFilterPick,
+        addBacktestSection,
     }
 }
