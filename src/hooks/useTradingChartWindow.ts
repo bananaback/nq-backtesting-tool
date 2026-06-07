@@ -1,9 +1,12 @@
 import type { RefObject, Dispatch, SetStateAction } from 'react'
 import type { ChartRuntimeState, Drawing, DrawMenuState, EntryDirection, Timeframe } from '../chartTypes'
 import { computeEntryStatus, getDefaultFibLevels, getDrawingLengthMinutes, getFibLevelPrice, getIndexByTime, getTimeframeMinutes, snapPriceToCandleOHLC } from '../chartUtils'
+import { captureChartToImage } from '../chartCapture'
 
 type TradingChartWindowDeps = {
     chartCanvasRef: RefObject<HTMLCanvasElement | null>
+    yAxisCanvasRef: RefObject<HTMLCanvasElement | null>
+    xAxisCanvasRef: RefObject<HTMLCanvasElement | null>
     runtimeRef: RefObject<ChartRuntimeState>
     currentTfRef: RefObject<Timeframe>
     drawModeRef: RefObject<boolean>
@@ -33,6 +36,8 @@ type TradingChartWindowDeps = {
  *
  * Args:
  *     chartCanvasRef: Ref to the chart canvas element.
+ *     yAxisCanvasRef: Ref to the y-axis canvas element.
+ *     xAxisCanvasRef: Ref to the x-axis canvas element.
  *     runtimeRef: Ref to the shared chart runtime state.
  *     currentTfRef: Ref to the current timeframe.
  *     drawModeRef: Ref indicating whether draw mode is active.
@@ -58,6 +63,8 @@ type TradingChartWindowDeps = {
  */
 export function bindTradingChartWindowEvents({
     chartCanvasRef,
+    yAxisCanvasRef,
+    xAxisCanvasRef,
     runtimeRef,
     currentTfRef,
     drawModeRef,
@@ -518,6 +525,16 @@ export function bindTradingChartWindowEvents({
         if ((event.key === 'd' || event.key === 'D') && !event.ctrlKey && !event.altKey && !event.metaKey) {
             event.preventDefault()
             toggleDrawMode()
+        }
+
+        if ((event.key === 'p' || event.key === 'P') && !event.ctrlKey && !event.altKey && !event.metaKey) {
+            event.preventDefault()
+            const chartCanvas = chartCanvasRef.current
+            const yAxisCanvas = yAxisCanvasRef.current
+            const xAxisCanvas = xAxisCanvasRef.current
+            if (chartCanvas && yAxisCanvas && xAxisCanvas) {
+                captureChartToImage(chartCanvas, yAxisCanvas, xAxisCanvas)
+            }
         }
     }
 

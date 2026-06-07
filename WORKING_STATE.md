@@ -1,18 +1,18 @@
 ## Focus
-Phase 3: Set exitFullscreenRef.current in App
+All phases complete
 
 ## Phases
-- [x] Phase 1: T1 (useTradingChartWindow.ts)
-- [x] Phase 2: T2 (useTradingChartController.ts)
-- [x] Phase 3: T3 (App.tsx)
+- [x] Phase 1: T1 (src/chartCapture.ts — already exists)
+- [x] Phase 2: T2 (src/hooks/useTradingChartWindow.ts — P key handler)
+- [x] Phase 3: T3 (src/hooks/useTradingChartController.ts — wire refs)
 
 ## Blockers
 None
 
 ## Decisions
-- ESC uses fallback pattern: cancel placements first, exit fullscreen only if nothing to cancel
-- D key requires no modifier keys (Ctrl/Alt/Meta) to avoid browser shortcut conflicts
-- exitFullscreenRef pattern needed because fullscreen state lives in App.tsx, outside the hook boundary
+- All tasks sequential (T1 → T2 → T3) since each depends on previous
+- No new npm dependencies — use browser-native toBlob + anchor download pattern
+- P key requires no modifier keys (consistent with D key pattern, avoids Ctrl+P conflict)
 
 ## Next
-All tasks complete. Synthesize for user.
+Done

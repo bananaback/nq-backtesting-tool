@@ -310,6 +310,8 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
 
     useEffect(() => bindTradingChartWindowEvents({
         chartCanvasRef,
+        yAxisCanvasRef,
+        xAxisCanvasRef,
         runtimeRef,
         currentTfRef,
         drawModeRef,
