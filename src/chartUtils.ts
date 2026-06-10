@@ -225,5 +225,6 @@ export function getToolLabel(tool: ToolType) {
     if (tool === 'ORG_RECENT_5') return 'Draw 5 Most Recent ORG'
     if (tool === 'GAP_RECENT_5') return 'Draw 5 Most Recent NDOG/NWOG'
     if (tool === 'ENTRY') return 'Entry'
+    if (tool === 'MKT_ANNOT') return 'Market Annotations'
     return 'Opening Range Gap'
 }

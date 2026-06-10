@@ -57,6 +57,12 @@ type UseTradingChartControllerReturn = {
     startCandleFilterPick: () => void
     addBacktestSection: (dateStr: string, timeStr: string) => Promise<boolean>
     exitFullscreenRef: RefObject<(() => void) | null>
+    onHideTopBarRef: RefObject<(() => void) | null>
+    mktAnnotDialogOpen: boolean
+    confirmMarketAnnotations: (dateStr: string) => void
+    closeMktAnnotDialog: () => void
+    prepareDayView: (dateStr: string) => Promise<void>
+    exportAllDays: () => Promise<void>
 }
 
 /** Main trading chart controller hook.
@@ -108,6 +114,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
     const drawMenuOpenRef = useRef(false)
     const showDaySeparatorsRef = useRef(true)
     const exitFullscreenRef = useRef<(() => void) | null>(null)
+    const onHideTopBarRef = useRef<(() => void) | null>(null)
 
     const [currentTF, setCurrentTF] = useState<Timeframe>('m1')
     const [jumpDate, setJumpDate] = useState('')
@@ -125,6 +132,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
     const [candleFilterMinute, setCandleFilterMinute] = useState('')
     const [renderAfterFilterMinute, setRenderAfterFilterMinute] = useState(true)
     const [isPickingCandleFilter, setIsPickingCandleFilter] = useState(false)
+    const [mktAnnotDialogOpen, setMktAnnotDialogOpen] = useState(false)
 
     const shiftCandleFilterMinute = (deltaMinutes: number) => {
         if (!candleFilterMinute) return
@@ -183,8 +191,13 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         handleYAxisMouseDown,
         handleYAxisDoubleClick,
         addBacktestSection,
+        generateMarketAnnotations,
+        prepareDayView,
+        exportAllDays,
     } = createTradingChartActions({
         chartCanvasRef,
+        yAxisCanvasRef,
+        xAxisCanvasRef,
         runtimeRef,
         currentTfRef,
         drawModeRef,
@@ -201,6 +214,8 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         setEntryPlacementStep,
         setCandleFilterMinute,
         setRenderAfterFilterMinute,
+        setMktAnnotDialogOpen,
+        onHideTopBar: () => onHideTopBarRef.current?.(),
         drawCanvas,
     })
 
@@ -248,6 +263,79 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         runtimeRef.current.pendingCandleFilterPick = isPickingCandleFilter
         drawCanvas()
     }, [isPickingCandleFilter])
+
+    // Expose functions on window for automation scripts
+    useEffect(() => {
+        const w = window as unknown as {
+            __chartAPI?: {
+                prepareDayView: (dateStr: string) => Promise<void>
+                captureChartAsBlob: () => Promise<Blob | null>
+                getAllDates: () => string[]
+            }
+        }
+        w.__chartAPI = {
+            prepareDayView,
+            captureChartAsBlob: () => new Promise<Blob | null>((resolve) => {
+                const chartCanvas = chartCanvasRef.current
+                const yAxisCanvas = yAxisCanvasRef.current
+                const xAxisCanvas = xAxisCanvasRef.current
+                if (!chartCanvas || !yAxisCanvas || !xAxisCanvas) {
+                    resolve(null)
+                    return
+                }
+                // Temporarily hide crosshair
+                const hadCrosshair = runtimeRef.current.crosshairActive
+                runtimeRef.current.crosshairActive = false
+                drawCanvas()
+
+                // Wait for render, then capture
+                requestAnimationFrame(() => {
+                    const width = chartCanvas.width + yAxisCanvas.width
+                    const height = chartCanvas.height + xAxisCanvas.height
+                    const offscreen = document.createElement('canvas')
+                    offscreen.width = width
+                    offscreen.height = height
+                    const ctx = offscreen.getContext('2d')
+                    if (!ctx) {
+                        resolve(null)
+                        return
+                    }
+                    ctx.drawImage(chartCanvas, 0, 0)
+                    ctx.drawImage(yAxisCanvas, chartCanvas.width, 0)
+                    ctx.drawImage(xAxisCanvas, 0, chartCanvas.height)
+
+                    // Restore crosshair
+                    if (hadCrosshair) {
+                        runtimeRef.current.crosshairActive = true
+                        drawCanvas()
+                    }
+
+                    offscreen.toBlob(resolve, 'image/png')
+                })
+            }),
+            getAllDates: () => {
+                const data = runtimeRef.current.chartData.m1
+                const dates = new Set<string>()
+                for (const candle of data) {
+                    dates.add(candle.time.slice(0, 10))
+                }
+                return Array.from(dates).sort()
+            },
+        }
+        return () => {
+            delete w.__chartAPI
+        }
+    }, [prepareDayView, chartCanvasRef, yAxisCanvasRef, xAxisCanvasRef, runtimeRef, drawCanvas])
+
+    const confirmMarketAnnotations = (dateStr: string) => {
+        setMktAnnotDialogOpen(false)
+        generateMarketAnnotations(dateStr)
+        drawCanvas()
+    }
+
+    const closeMktAnnotDialog = () => {
+        setMktAnnotDialogOpen(false)
+    }
 
     const updateDrawingLengthMinutes = (drawingId: number, lengthMinutes: number | null) => {
         const nextDrawings = runtimeRef.current.drawings.map((drawing) => {
@@ -386,5 +474,11 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         startCandleFilterPick,
         addBacktestSection,
         exitFullscreenRef,
+        onHideTopBarRef,
+        mktAnnotDialogOpen,
+        confirmMarketAnnotations,
+        closeMktAnnotDialog,
+        prepareDayView,
+        exportAllDays,
     }
 }

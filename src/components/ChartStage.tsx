@@ -2,6 +2,7 @@ import type { MouseEvent, RefObject, WheelEvent } from 'react'
 import DrawMenu from './DrawMenu'
 import DrawingLengthModal from './DrawingLengthModal.tsx'
 import FibSetupModal from './FibSetupModal'
+import MarketAnnotationsDialog from './MarketAnnotationsDialog'
 import ObjectsPanel from './ObjectsPanel'
 import OhlcBox from './OhlcBox'
 import type { Drawing, DrawMenuState, FibDrawing, OhlcState, ToolType } from '../chartTypes'
@@ -36,6 +37,9 @@ type ChartStageProps = {
     onCancelFibPlacement?: () => void
     entryPlacementStep?: 'pick-entry' | 'pick-sl' | 'pick-tp' | 'pick-width' | null
     onCancelEntryPlacement?: () => void
+    mktAnnotDialogOpen?: boolean
+    onCloseMktAnnotDialog?: () => void
+    onConfirmMktAnnot?: (dateStr: string) => void
 }
 
 function ChartStage({
@@ -68,6 +72,9 @@ function ChartStage({
     onCancelFibPlacement,
     entryPlacementStep,
     onCancelEntryPlacement,
+    mktAnnotDialogOpen,
+    onCloseMktAnnotDialog,
+    onConfirmMktAnnot,
 }: ChartStageProps) {
     const fibSetupDrawingForModal = fibSetupDrawing && fibSetupDrawing.type === 'FIB' ? fibSetupDrawing as FibDrawing : null
 
@@ -135,6 +142,12 @@ function ChartStage({
                             drawing={fibSetupDrawingForModal}
                             onClose={onCloseFibSetup}
                             onSave={onSaveFibSetup}
+                        />
+                    ) : null}
+                    {mktAnnotDialogOpen && onCloseMktAnnotDialog && onConfirmMktAnnot ? (
+                        <MarketAnnotationsDialog
+                            onClose={onCloseMktAnnotDialog}
+                            onConfirm={onConfirmMktAnnot}
                         />
                     ) : null}
                 </div>

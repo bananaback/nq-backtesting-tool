@@ -61,10 +61,6 @@ function drawFibDrawing(
     ctx.strokeStyle = '#000000'
     ctx.setLineDash(dash)
     ctx.lineWidth = isSelected ? baseLineWidth + 0.8 : baseLineWidth
-    ctx.beginPath()
-    ctx.moveTo(x1, y1)
-    ctx.lineTo(x2, y2)
-    ctx.stroke()
 
     ctx.fillStyle = '#000000'
     ctx.beginPath()
@@ -756,9 +752,22 @@ export function drawTradingChart({
                 const rectWidth = Math.max(1, (lengthMinutes / timeframeMinutes) * candleSpace)
                 endX = x + rectWidth
             } else {
-                // Scan forward for first candle crossing this price level
+                // Determine scan boundaries
+                let scanStartIdx = index + 1
+                let scanEndIdx = endIdx
+
+                if (tool.breakScanStart) {
+                    const bsi = getIndexByTime(data, tool.breakScanStart)
+                    if (bsi !== -1) scanStartIdx = bsi + 1
+                }
+                if (tool.endTime) {
+                    const eti = getIndexByTime(data, tool.endTime)
+                    if (eti !== -1) scanEndIdx = eti
+                }
+
+                // Scan forward for first candle wick crossing this price level
                 let crossCandleIdx = -1
-                for (let i = index + 1; i <= endIdx; i++) {
+                for (let i = scanStartIdx; i <= scanEndIdx; i++) {
                     if (data[i].low <= tool.price && tool.price <= data[i].high) {
                         crossCandleIdx = i
                         break
@@ -767,7 +776,7 @@ export function drawTradingChart({
                 if (crossCandleIdx !== -1) {
                     endX = (crossCandleIdx - runtime.viewStart) * candleSpace + candleSpace / 2
                 } else {
-                    endX = (endIdx - runtime.viewStart) * candleSpace + candleSpace / 2
+                    endX = (scanEndIdx - runtime.viewStart) * candleSpace + candleSpace / 2
                 }
             }
             ctx.beginPath()

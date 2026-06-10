@@ -27,6 +27,8 @@ type TopBarProps = {
     onStepCandleFilterMinute: (deltaMinutes: number) => void
     onStartCandleFilterPick: () => void
     onHideTopBar: () => void
+    onPrepareDayView: () => void
+    onExportAllDays: () => void
 }
 
 function getTimeframeLabel(tf: Timeframe) {
@@ -65,6 +67,8 @@ function TopBar({
     onStepCandleFilterMinute,
     onStartCandleFilterPick,
     onHideTopBar,
+    onPrepareDayView,
+    onExportAllDays,
 }: TopBarProps): JSX.Element {
     return (
         <>
@@ -173,6 +177,12 @@ function TopBar({
 
                 <button type="button" className="action-btn" onClick={onHideTopBar}>
                     Hide Top Bar
+                </button>
+                <button type="button" className="action-btn action-btn--primary" onClick={onPrepareDayView}>
+                    📅 Prepare Day
+                </button>
+                <button type="button" className="action-btn action-btn--primary" onClick={onExportAllDays}>
+                    📦 Export All Days
                 </button>
             </div>
             <div className="topbar__hint">Drag to pan • Scroll to zoom • Drag right scale to Y-zoom</div>

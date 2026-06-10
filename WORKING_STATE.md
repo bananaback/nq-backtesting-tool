@@ -1,15 +1,19 @@
 ## Focus
-Phase 1 complete: Snap-to-OHLC removed from entry tool
+All phases complete — feature implemented
 
 ## Phases
 - [x] Phase 1 (parallel): T1, T2
+- [x] Phase 2 (parallel): T3, T4
+- [x] Phase 3 (sequential): T5
 
 ## Blockers
 None
 
 ## Decisions
-- Keep snapPriceToCandleOHLC function: Fib tool still needs it
-- Keep 4-click wizard flow: only change price source from snapped to cursor
+- Reuse existing drawing types (VLINE, LineDrawing, FibDrawing) as individual objects
+- Add PM_HIGH/PM_LOW to LineDrawing.type with new optional endTime/breakScanStart fields
+- Dialog uses native <input type="date"> following existing pattern
+- generateMarketAnnotations always uses m1 data regardless of current timeframe
 
 ## Next
-All tasks complete. Synthesize report.
+None — feature complete

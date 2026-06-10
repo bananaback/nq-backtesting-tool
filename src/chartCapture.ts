@@ -11,13 +11,21 @@
  * @param chartCanvas - The main chart canvas with rendered candle content.
  * @param yAxisCanvas - The y-axis canvas with rendered price labels.
  * @param xAxisCanvas - The x-axis canvas with rendered time labels.
+ * @param runtimeRef - Optional ref to runtime state to temporarily hide crosshair.
  */
 export function captureChartToImage(
   chartCanvas: HTMLCanvasElement,
   yAxisCanvas: HTMLCanvasElement,
-  xAxisCanvas: HTMLCanvasElement
+  xAxisCanvas: HTMLCanvasElement,
+  runtimeRef?: { current: { crosshairActive: boolean } }
 ): void {
   try {
+    // Temporarily hide crosshair for clean capture
+    const hadCrosshair = runtimeRef?.current.crosshairActive ?? false
+    if (runtimeRef) {
+      runtimeRef.current.crosshairActive = false
+    }
+
     const width = chartCanvas.width + yAxisCanvas.width
     const height = chartCanvas.height + xAxisCanvas.height
 
@@ -31,6 +39,11 @@ export function captureChartToImage(
     ctx.drawImage(chartCanvas, 0, 0)
     ctx.drawImage(yAxisCanvas, chartCanvas.width, 0)
     ctx.drawImage(xAxisCanvas, 0, chartCanvas.height)
+
+    // Restore crosshair state
+    if (runtimeRef && hadCrosshair) {
+      runtimeRef.current.crosshairActive = true
+    }
 
     offscreenCanvas.toBlob((blob: Blob | null) => {
       if (!blob) return

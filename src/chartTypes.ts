@@ -16,6 +16,7 @@ export type ToolType =
     | 'ORG_RECENT_5'
     | 'GAP_RECENT_5'
     | 'ENTRY'
+    | 'MKT_ANNOT'
 
 export type Candle = {
     time: string
@@ -84,10 +85,12 @@ export type OrgDrawing = {
 
 export type LineDrawing = {
     id: number
-    type: 'EQH' | 'EQL' | 'SH' | 'SL'
+    type: 'EQH' | 'EQL' | 'SH' | 'SL' | 'PM_HIGH' | 'PM_LOW'
     time: string
     price: number
     lengthMinutes?: number | null
+    endTime?: string
+    breakScanStart?: string
     color: string
 }
 
@@ -174,6 +177,7 @@ export const DRAW_TOOL_OPTIONS: ToolType[] = [
     'ORG_RECENT_5',
     'GAP_RECENT_5',
     'ENTRY',
+    'MKT_ANNOT',
 ]
 
 export function createEmptyChartData(): Record<Timeframe, Candle[]> {

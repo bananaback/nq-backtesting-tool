@@ -1,5 +1,6 @@
 import ChartStage from './components/ChartStage'
 import TopBar from './components/TopBar'
+import MarketAnnotationsDialog from './components/MarketAnnotationsDialog'
 import { useTradingChartController } from './hooks/useTradingChartController'
 import './App.css'
 import { useEffect, useState } from 'react'
@@ -8,6 +9,7 @@ function App() {
   const [isTopBarVisible, setIsTopBarVisible] = useState(true)
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false)
   const [sectionCounter, setSectionCounter] = useState(0)
+  const [prepareDayDialogOpen, setPrepareDayDialogOpen] = useState(false)
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -64,11 +66,18 @@ function App() {
     startCandleFilterPick,
     addBacktestSection,
     exitFullscreenRef,
+    onHideTopBarRef,
+    mktAnnotDialogOpen,
+    confirmMarketAnnotations,
+    closeMktAnnotDialog,
+    prepareDayView,
+    exportAllDays,
   } = useTradingChartController()
 
   useEffect(() => {
     exitFullscreenRef.current = () => setIsTopBarVisible(true)
-  }, [exitFullscreenRef, setIsTopBarVisible])
+    onHideTopBarRef.current = () => setIsTopBarVisible(false)
+  }, [exitFullscreenRef, onHideTopBarRef, setIsTopBarVisible])
 
   const lengthEditorDrawing = drawings.find((drawing) => drawing.id === lengthEditorDrawingId) ?? null
   const fibSetupDrawing = drawings.find((drawing) => drawing.id === fibSetupDrawingId) ?? null
@@ -106,6 +115,8 @@ function App() {
           onStepCandleFilterMinute={shiftCandleFilterMinute}
           onStartCandleFilterPick={startCandleFilterPick}
           onHideTopBar={() => setIsTopBarVisible(false)}
+          onPrepareDayView={() => setPrepareDayDialogOpen(true)}
+          onExportAllDays={exportAllDays}
           isSectionModalOpen={isSectionModalOpen}
           onOpenSectionModal={() => setIsSectionModalOpen(true)}
           onCloseSectionModal={() => setIsSectionModalOpen(false)}
@@ -213,7 +224,19 @@ function App() {
         onCancelFibPlacement={cancelFibPlacement}
         entryPlacementStep={entryPlacementStep}
         onCancelEntryPlacement={cancelEntryPlacement}
+        mktAnnotDialogOpen={mktAnnotDialogOpen}
+        onCloseMktAnnotDialog={closeMktAnnotDialog}
+        onConfirmMktAnnot={confirmMarketAnnotations}
       />
+      {prepareDayDialogOpen ? (
+        <MarketAnnotationsDialog
+          onClose={() => setPrepareDayDialogOpen(false)}
+          onConfirm={(dateStr) => {
+            setPrepareDayDialogOpen(false)
+            prepareDayView(dateStr)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

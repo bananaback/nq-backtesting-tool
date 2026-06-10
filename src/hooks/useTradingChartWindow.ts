@@ -535,7 +535,7 @@ export function bindTradingChartWindowEvents({
             const yAxisCanvas = yAxisCanvasRef.current
             const xAxisCanvas = xAxisCanvasRef.current
             if (chartCanvas && yAxisCanvas && xAxisCanvas) {
-                captureChartToImage(chartCanvas, yAxisCanvas, xAxisCanvas)
+                captureChartToImage(chartCanvas, yAxisCanvas, xAxisCanvas, runtimeRef)
             }
         }
     }

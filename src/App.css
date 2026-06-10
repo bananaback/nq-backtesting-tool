@@ -333,6 +333,12 @@
   border-color: rgba(37, 99, 235, 0.45);
 }
 
+.action-btn--primary {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(14, 165, 233, 0.25));
+  color: #0f172a;
+  border-color: rgba(37, 99, 235, 0.55);
+}
+
 .file-input {
   position: relative;
   padding: 8px 12px;
