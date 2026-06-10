@@ -864,9 +864,8 @@ export function drawTradingChart({
                 let lastVisibleIndex = candleFilterLastIndex
                 hoverDataIndex = Math.min(hoverDataIndex, lastVisibleIndex)
                 if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
-                    const hoverCandle = data[hoverDataIndex]
                     const cursorPrice = runtime.manualMaxP - (runtime.crosshairY / chartCanvas.height) * priceRange
-                    const firstPrice = snapPriceToCandleOHLC(hoverCandle, cursorPrice)
+                    const firstPrice = cursorPrice
                     const firstX = (hoverDataIndex - runtime.viewStart) * candleSpace + candleSpace / 2
                     const firstY = getY(firstPrice)
 
@@ -908,9 +907,8 @@ export function drawTradingChart({
                     let lastVisibleIndex = candleFilterLastIndex
                     hoverDataIndex = Math.min(hoverDataIndex, lastVisibleIndex)
                     if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
-                        const hoverCandle = data[hoverDataIndex]
                         const cursorPrice = runtime.manualMaxP - (runtime.crosshairY / chartCanvas.height) * priceRange
-                        const slPrice = snapPriceToCandleOHLC(hoverCandle, cursorPrice)
+                        const slPrice = cursorPrice
                         const slY = getY(slPrice)
 
                         // SL preview line (dashed red)
@@ -1000,9 +998,8 @@ export function drawTradingChart({
                     let lastVisibleIndex = candleFilterLastIndex
                     hoverDataIndex = Math.min(hoverDataIndex, lastVisibleIndex)
                     if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
-                        const hoverCandle = data[hoverDataIndex]
                         const cursorPrice = runtime.manualMaxP - (runtime.crosshairY / chartCanvas.height) * priceRange
-                        const tpPrice = snapPriceToCandleOHLC(hoverCandle, cursorPrice)
+                        const tpPrice = cursorPrice
                         const tpY = getY(tpPrice)
 
                         // TP preview line (dashed green)

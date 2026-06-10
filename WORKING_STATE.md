@@ -1,17 +1,15 @@
 ## Focus
-All phases complete
+Phase 1 complete: Snap-to-OHLC removed from entry tool
 
 ## Phases
-- [x] Phase 1: T1 (src/chartUtils.ts — new utility function)
-- [x] Phase 2: T2 (src/hooks/useTradingChartActions.ts — use rounded time)
+- [x] Phase 1 (parallel): T1, T2
 
 ## Blockers
 None
 
 ## Decisions
-- Two sequential phases (T1 → T2) since T2 depends on T1
-- Floor operation (not round) — snaps down to nearest valid candle time
-- No validation in utility — browser enforces HH:MM format via input type="time"
+- Keep snapPriceToCandleOHLC function: Fib tool still needs it
+- Keep 4-click wizard flow: only change price source from snapped to cursor
 
 ## Next
-Synthesize and report to user
+All tasks complete. Synthesize report.

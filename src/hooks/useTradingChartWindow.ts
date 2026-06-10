@@ -245,7 +245,7 @@ export function bindTradingChartWindowEvents({
                         // Click 1: set entry point
                         runtime.pendingEntryPlacement = {
                             ...pending,
-                            firstPoint: { time: candle.time, price: snappedPrice },
+                            firstPoint: { time: candle.time, price: cursorPrice },
                         }
                         setEntryPlacementStep('pick-sl')
                         drawCanvas()
@@ -254,7 +254,7 @@ export function bindTradingChartWindowEvents({
                     if (!pending.secondPoint) {
                         // Click 2: set stop loss point
                         const entryPrice = pending.firstPoint.price
-                        const stopLossPrice = snappedPrice
+                        const stopLossPrice = cursorPrice
                         if (stopLossPrice === entryPrice) {
                             window.alert('Stop loss cannot equal entry price.')
                             return
@@ -271,7 +271,7 @@ export function bindTradingChartWindowEvents({
                         // Click 3: set take profit point → transition to 'pick-width'
                         const entryPriceClick3 = pending.firstPoint.price
                         const stopLossPriceClick3 = pending.secondPoint.price
-                        const takeProfitPrice = snappedPrice
+                        const takeProfitPrice = cursorPrice
                         const inferredDirectionClick3: EntryDirection = stopLossPriceClick3 < entryPriceClick3 ? 'LONG' : 'SHORT'
                         if (inferredDirectionClick3 === 'LONG' && takeProfitPrice <= entryPriceClick3) {
                             window.alert('LONG take profit must be above entry price.')
