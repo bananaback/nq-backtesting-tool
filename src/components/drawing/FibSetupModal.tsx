@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import type { FibDrawing, FibLineStyle, FibTemplateKey } from '../chartTypes'
-import { FIB_TEMPLATES, getDefaultFibLevels } from '../chartUtils'
+import type { FibDrawing, FibLineStyle, FibTemplateKey } from '../../types/chart'
+import { FIB_TEMPLATES, getDefaultFibLevels } from '../../constants/chart'
 
 type FibSetupModalProps = {
     drawing: FibDrawing

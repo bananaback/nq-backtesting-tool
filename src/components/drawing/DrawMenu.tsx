@@ -1,5 +1,5 @@
-import { DRAW_TOOL_OPTIONS, type DrawMenuState, type ToolType } from '../chartTypes'
-import { getToolLabel } from '../chartUtils'
+import { DRAW_TOOL_OPTIONS, type DrawMenuState, type ToolType } from '../../types/chart'
+import { getToolLabel } from '../../constants/chart'
 
 type DrawMenuProps = {
     position: Exclude<DrawMenuState, null>

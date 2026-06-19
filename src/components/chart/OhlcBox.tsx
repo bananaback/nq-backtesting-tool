@@ -1,4 +1,4 @@
-import type { OhlcState } from '../chartTypes'
+import type { OhlcState } from '../../types/chart'
 
 type OhlcBoxProps = {
     ohlc: OhlcState

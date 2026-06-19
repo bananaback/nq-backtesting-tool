@@ -1,31 +1,15 @@
 import type { ChangeEvent, JSX } from 'react'
-import { TIMEFRAMES, type Timeframe } from '../chartTypes'
-import BacktestSectionModal from './BacktestSectionModal'
+import { useChartContext } from '../../context/ChartContext'
+import { TIMEFRAMES } from '../../constants/chart'
+import type { Timeframe } from '../../types/chart'
+import BacktestSectionModal from '../modals/BacktestSectionModal'
 
 type TopBarProps = {
-    currentTF: Timeframe
-    jumpDate: string
-    drawMode: boolean
-    showDaySeparators: boolean
-    objectsOpen: boolean
-    candleFilterMinute: string
-    renderAfterFilterMinute: boolean
-    isPickingCandleFilter: boolean
     isSectionModalOpen: boolean
     onOpenSectionModal: () => void
     onCloseSectionModal: () => void
     onSubmitSection: (name: string, date: string, time: string) => Promise<boolean>
     sectionDefaultName: string
-    onTimeframeChange: (nextTF: Timeframe) => void
-    onJumpDateChange: (value: string) => void
-    onJumpToDate: () => void
-    onToggleDrawMode: () => void
-    onToggleDaySeparators: () => void
-    onToggleObjects: () => void
-    onLoadCsvFiles: (files: FileList | null) => void
-    onRenderAfterFilterMinuteChange: (value: boolean) => void
-    onStepCandleFilterMinute: (deltaMinutes: number) => void
-    onStartCandleFilterPick: () => void
     onHideTopBar: () => void
     onPrepareDayView: () => void
     onExportAllDays: () => void
@@ -43,33 +27,16 @@ function getTimeframeLabel(tf: Timeframe) {
  * candle filter, CSV load, and the backtest section modal.
  */
 function TopBar({
-    currentTF,
-    jumpDate,
-    drawMode,
-    showDaySeparators,
-    objectsOpen,
-    candleFilterMinute,
-    renderAfterFilterMinute,
-    isPickingCandleFilter,
     isSectionModalOpen,
     onOpenSectionModal,
     onCloseSectionModal,
     onSubmitSection,
     sectionDefaultName,
-    onTimeframeChange,
-    onJumpDateChange,
-    onJumpToDate,
-    onToggleDrawMode,
-    onToggleDaySeparators,
-    onToggleObjects,
-    onLoadCsvFiles,
-    onRenderAfterFilterMinuteChange,
-    onStepCandleFilterMinute,
-    onStartCandleFilterPick,
     onHideTopBar,
     onPrepareDayView,
     onExportAllDays,
 }: TopBarProps): JSX.Element {
+    const ctx = useChartContext()
     return (
         <>
             <header className="topbar">
@@ -84,8 +51,8 @@ function TopBar({
                         <button
                             key={tf}
                             type="button"
-                            className={tf === currentTF ? 'tf-switcher__btn is-active' : 'tf-switcher__btn'}
-                            onClick={() => onTimeframeChange(tf)}
+                            className={tf === ctx.currentTF ? 'tf-switcher__btn is-active' : 'tf-switcher__btn'}
+                            onClick={() => ctx.changeTimeframe(tf)}
                         >
                             {getTimeframeLabel(tf)}
                         </button>
@@ -93,14 +60,14 @@ function TopBar({
                 </div>
 
                 <div className="toolbar-buttons">
-                    <button type="button" className={drawMode ? 'action-btn is-on' : 'action-btn'} onClick={onToggleDrawMode}>
-                        {drawMode ? '✏️ Draw: ON' : '✏️ Draw: OFF'}
+                    <button type="button" className={ctx.drawMode ? 'action-btn is-on' : 'action-btn'} onClick={ctx.toggleDrawMode}>
+                        {ctx.drawMode ? '✏️ Draw: ON' : '✏️ Draw: OFF'}
                     </button>
-                    <button type="button" className={showDaySeparators ? 'action-btn is-on' : 'action-btn'} onClick={onToggleDaySeparators}>
-                        {showDaySeparators ? '⋮ Day Lines: ON' : '⋮ Day Lines: OFF'}
+                    <button type="button" className={ctx.showDaySeparators ? 'action-btn is-on' : 'action-btn'} onClick={ctx.toggleDaySeparators}>
+                        {ctx.showDaySeparators ? '⋮ Day Lines: ON' : '⋮ Day Lines: OFF'}
                     </button>
-                    <button type="button" className="action-btn" onClick={onToggleObjects}>
-                        {objectsOpen ? '📋 Objects: OPEN' : '📋 Objects'}
+                    <button type="button" className="action-btn" onClick={() => ctx.setObjectsOpen(v => !v)}>
+                        {ctx.objectsOpen ? '📋 Objects: OPEN' : '📋 Objects'}
                     </button>
                     <button type="button" className="action-btn" onClick={onOpenSectionModal}>
                         📌 New Section
@@ -111,7 +78,7 @@ function TopBar({
                     className="date-jump"
                     onSubmit={(event) => {
                         event.preventDefault()
-                        onJumpToDate()
+                        ctx.jumpToDate(ctx.jumpDate)
                     }}
                 >
                     <label className="date-jump__label" htmlFor="chart-jump-date">
@@ -121,8 +88,8 @@ function TopBar({
                         id="chart-jump-date"
                         className="date-jump__input"
                         type="date"
-                        value={jumpDate}
-                        onChange={(event) => onJumpDateChange(event.target.value)}
+                        value={ctx.jumpDate}
+                        onChange={(event) => ctx.setJumpDate(event.target.value)}
                     />
                     <button type="submit" className="date-jump__btn">
                         Go
@@ -133,35 +100,35 @@ function TopBar({
                     <span className="candle-filter__label">Candles after</span>
                     <button
                         type="button"
-                        className={isPickingCandleFilter ? 'candle-filter__pick is-on' : 'candle-filter__pick'}
-                        onClick={onStartCandleFilterPick}
+                        className={ctx.isPickingCandleFilter ? 'candle-filter__pick is-on' : 'candle-filter__pick'}
+                        onClick={ctx.startCandleFilterPick}
                     >
-                        {isPickingCandleFilter ? 'Picking… click candle' : 'Pick Candle'}
+                        {ctx.isPickingCandleFilter ? 'Picking… click candle' : 'Pick Candle'}
                     </button>
-                    <span className="candle-filter__selected">{candleFilterMinute ? candleFilterMinute.replace('T', ' ') : 'No candle selected'}</span>
+                    <span className="candle-filter__selected">{ctx.candleFilterMinute ? ctx.candleFilterMinute.replace('T', ' ') : 'No candle selected'}</span>
                     <button
                         type="button"
                         className="candle-filter__step"
-                        onClick={() => onStepCandleFilterMinute(-1)}
-                        disabled={!candleFilterMinute}
+                        onClick={() => ctx.shiftCandleFilterMinute(-1)}
+                        disabled={!ctx.candleFilterMinute}
                     >
                         Prev
                     </button>
                     <button
                         type="button"
                         className="candle-filter__step"
-                        onClick={() => onStepCandleFilterMinute(1)}
-                        disabled={!candleFilterMinute}
+                        onClick={() => ctx.shiftCandleFilterMinute(1)}
+                        disabled={!ctx.candleFilterMinute}
                     >
                         Next
                     </button>
                     <button
                         type="button"
-                        className={renderAfterFilterMinute ? 'candle-filter__toggle is-on' : 'candle-filter__toggle'}
-                        onClick={() => onRenderAfterFilterMinuteChange(!renderAfterFilterMinute)}
-                        disabled={!candleFilterMinute}
+                        className={ctx.renderAfterFilterMinute ? 'candle-filter__toggle is-on' : 'candle-filter__toggle'}
+                        onClick={() => ctx.setRenderAfterFilterMinute(!ctx.renderAfterFilterMinute)}
+                        disabled={!ctx.candleFilterMinute}
                     >
-                        {renderAfterFilterMinute ? 'After: Show' : 'After: Hide'}
+                        {ctx.renderAfterFilterMinute ? 'After: Show' : 'After: Hide'}
                     </button>
                 </div>
 
@@ -170,7 +137,7 @@ function TopBar({
                         type="file"
                         accept=".csv"
                         multiple
-                        onChange={(event: ChangeEvent<HTMLInputElement>) => onLoadCsvFiles(event.target.files)}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => ctx.loadCsvFiles(event.target.files)}
                     />
                     <span>Load CSVs</span>
                 </label>

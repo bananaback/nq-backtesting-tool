@@ -1,5 +1,5 @@
-import type { Drawing } from '../chartTypes'
-import { formatObjectTime } from '../chartUtils'
+import type { Drawing } from '../../types/chart'
+import { formatObjectTime } from '../../utils/time'
 
 type ObjectsPanelProps = {
     drawings: Drawing[]
