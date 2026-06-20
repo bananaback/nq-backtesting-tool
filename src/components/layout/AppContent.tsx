@@ -300,6 +300,7 @@ function AppContent() {
           onConfirm={(dateStr) => {
             setPrepareDayDialogOpen(false)
             ctx.prepareDayView(dateStr)
+            setIsTopBarVisible(false)
           }}
         />
       ) : null}
