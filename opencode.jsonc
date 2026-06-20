@@ -1,16 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "shell": "/bin/bash",
-  "model": "opencode-go/minimax-m3",
-  "default_agent": "manager",
+  "model": "deepseek/deepseek-v4-pro",
+  "default_agent": "ds-lead",
   "instructions": [
-    "AGENTS.md",
-    "WORKING_STATE.md"
+    "DS_WORKFLOW.md"
   ],
   "provider": {
-    "opencode-go": {
+    "deepseek": {
       "models": {
-        "minimax-m3": {
+        "deepseek-v4-pro": {
           "options": {
             "reasoning_effort": "medium"
           }
