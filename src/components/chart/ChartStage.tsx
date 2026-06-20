@@ -15,9 +15,14 @@ type ChartStageProps = {
     fibSetupDrawing?: Drawing | null
     onCloseFibSetup?: () => void
     onSaveFibSetup?: (drawingId: number, updates: Pick<FibDrawing, 'templateKey' | 'extendRight' | 'reverse' | 'lineStyle' | 'lineWidth' | 'levels'>) => void
+    onOpenJumpDateModal: () => void
+    isBacktestMode: boolean
+    onJumpToLatest: () => void
+    tfQuickInput: { visible: boolean; value: string }
+    onTfQuickInputChange: (v: { visible: boolean; value: string }) => void
 }
 
-function ChartStage({ lengthEditorDrawing, onEditDrawing, onCloseLengthEditor, onSaveDrawingLength, fibSetupDrawing, onCloseFibSetup, onSaveFibSetup }: ChartStageProps) {
+function ChartStage({ lengthEditorDrawing, onEditDrawing, onCloseLengthEditor, onSaveDrawingLength, fibSetupDrawing, onCloseFibSetup, onSaveFibSetup, onOpenJumpDateModal, isBacktestMode, onJumpToLatest, tfQuickInput, onTfQuickInputChange }: ChartStageProps) {
     const ctx = useChartContext()
     const fibSetupDrawingForModal = fibSetupDrawing && fibSetupDrawing.type === 'FIB' ? fibSetupDrawing as FibDrawing : null
 
@@ -43,6 +48,56 @@ function ChartStage({ lengthEditorDrawing, onEditDrawing, onCloseLengthEditor, o
                         aria-label="Y axis"
                     />
 
+                    <button
+                        type="button"
+                        className="jump-date-float"
+                        onClick={onOpenJumpDateModal}
+                        title="Jump to date"
+                        aria-label="Jump to date"
+                    >
+                        📅
+                    </button>
+                    {isBacktestMode ? (
+                        <span className="backtest-mode-indicator">Backtest Mode</span>
+                    ) : null}
+                    {tfQuickInput.visible ? (
+                        <input
+                            className="tf-quick-input"
+                            type="text"
+                            value={tfQuickInput.value}
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const val = tfQuickInput.value.toLowerCase().trim()
+                                    if (val === '1h' || val === '60') ctx.changeTimeframe('h1')
+                                    else if (val === '1') ctx.changeTimeframe('m1')
+                                    else if (val === '5') ctx.changeTimeframe('m5')
+                                    else if (val === '15') ctx.changeTimeframe('m15')
+                                    onTfQuickInputChange({ visible: false, value: '' })
+                                } else if (e.key === 'Escape') {
+                                    onTfQuickInputChange({ visible: false, value: '' })
+                                }
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9hH]/g, '')
+                                onTfQuickInputChange({ visible: val.length > 0, value: val })
+                            }}
+                            onBlur={() => onTfQuickInputChange({ visible: false, value: '' })}
+                            placeholder="tf"
+                            aria-label="Quick timeframe input"
+                        />
+                    ) : null}
+
+                    <button
+                        type="button"
+                        className="scroll-latest-float"
+                        onClick={onJumpToLatest}
+                        title="Scroll to latest candle"
+                        aria-label="Scroll to latest candle"
+                    >
+                        ⏩
+                    </button>
                     {ctx.drawMenu ? <DrawMenu position={ctx.drawMenu} onCreateDrawing={ctx.createDrawing} /> : null}
                     {ctx.objectsOpen ? <ObjectsPanel drawings={ctx.drawings} onRemove={ctx.removeDrawing} onClose={() => ctx.setObjectsOpen(false)} selectedDrawingId={ctx.selectedDrawingId} onSelect={ctx.setSelectedDrawingId} onEditDrawing={onEditDrawing} /> : null}
                     <OhlcBox ohlc={ctx.ohlc} />
@@ -89,6 +144,12 @@ function ChartStage({ lengthEditorDrawing, onEditDrawing, onCloseLengthEditor, o
                             onClose={ctx.closeMktAnnotDialog}
                             onConfirm={ctx.confirmMarketAnnotations}
                         />
+                    ) : null}
+                    {ctx.chartLoading ? (
+                        <div className="chart-loading-overlay">
+                            <div className="chart-loading-spinner" />
+                            <span className="chart-loading-text">Loading...</span>
+                        </div>
                     ) : null}
                 </div>
 

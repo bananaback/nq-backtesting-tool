@@ -85,7 +85,7 @@ export type OrgDrawing = {
 
 export type LineDrawing = {
     id: number
-    type: 'EQH' | 'EQL' | 'SH' | 'SL' | 'PM_HIGH' | 'PM_LOW'
+    type: 'EQH' | 'EQL' | 'SH' | 'SL' | 'PM_HIGH' | 'PM_LOW' | 'LONDON_HIGH' | 'LONDON_LOW' | 'PREV_DAY_PM_HIGH' | 'PREV_DAY_PM_LOW' | 'PREV_DAY_AM_HIGH' | 'PREV_DAY_AM_LOW' | 'OPEN_0000' | 'OPEN_0830' | 'OPEN_0930'
     time: string
     price: number
     lengthMinutes?: number | null

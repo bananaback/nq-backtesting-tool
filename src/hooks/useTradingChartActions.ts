@@ -25,6 +25,7 @@ type TradingChartActionsDeps = {
     setRenderAfterFilterMinute?: Dispatch<SetStateAction<boolean>>
     setMktAnnotDialogOpen: Dispatch<SetStateAction<boolean>>
     onHideTopBar?: () => void
+    setChartLoading?: (v: boolean) => void
     drawCanvas: () => void
 }
 
@@ -50,6 +51,7 @@ export function createTradingChartActions({
     setRenderAfterFilterMinute,
     setMktAnnotDialogOpen,
     onHideTopBar,
+    setChartLoading,
     drawCanvas,
 }: TradingChartActionsDeps) {
     const handleChartMouseDown = (event: ReactMouseEvent<HTMLCanvasElement>) => {
@@ -173,6 +175,128 @@ export function createTradingChartActions({
         runtime.viewStart = clamp(index - visibleCount / 2, 0, Math.max(data.length - visibleCount, 0))
         runtime.isAutoScaled = true
         setJumpDate(dateStr)
+        drawCanvas()
+    }
+
+    const jumpToLatest = () => {
+        const runtime = runtimeRef.current
+        const data = runtime.chartData[currentTfRef.current]
+        if (!data.length) return
+
+        let targetIndex = data.length - 1
+
+        // If candle filter is active and hiding after-filter candles,
+        // the last visible candle is at the filter boundary
+        if (runtime.candleFilterMinute && !runtime.renderAfterFilterMinute) {
+            const parts = runtime.candleFilterMinute.split('T')
+            if (parts.length === 2) {
+                const dateStr = parts[0]
+                const timeStr = parts[1]
+                const dateStartIndex = getFirstIndexByDate(data, dateStr)
+                if (dateStartIndex >= 0) {
+                    for (let i = dateStartIndex; i < data.length; i += 1) {
+                        const t = data[i].time
+                        if (!t.startsWith(dateStr)) break
+                        if (t.includes(timeStr)) {
+                            targetIndex = i
+                            break
+                        }
+                    }
+                    // If no exact time match found, fall back to the last candle of that date
+                    if (targetIndex === data.length - 1 && targetIndex > dateStartIndex) {
+                        // Scan backward to find last candle of the filtered date
+                        for (let i = data.length - 1; i >= dateStartIndex; i -= 1) {
+                            if (data[i].time.startsWith(dateStr)) {
+                                targetIndex = i
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const visibleCount = Math.max(10, Math.min(runtime.visibleCount, data.length))
+        runtime.visibleCount = visibleCount
+        runtime.viewStart = Math.max(0, targetIndex - Math.floor(visibleCount / 2))
+        runtime.isAutoScaled = true
+        drawCanvas()
+    }
+
+    const jumpToMinute = (minuteStr: string) => {
+        const runtime = runtimeRef.current
+        const data = runtime.chartData[currentTfRef.current]
+        if (!data.length) {
+            window.alert('Load chart data first.')
+            return
+        }
+
+        const parts = minuteStr.split('T')
+        if (parts.length !== 2) return
+
+        const dateStr = parts[0]
+        const timeStr = parts[1]
+
+        const dateStartIndex = getFirstIndexByDate(data, dateStr)
+        if (dateStartIndex < 0) {
+            window.alert(`No data found for ${dateStr}`)
+            return
+        }
+
+        let index = -1
+        for (let i = dateStartIndex; i < data.length; i += 1) {
+            const t = data[i].time
+            if (!t.startsWith(dateStr)) break
+            if (t.includes(timeStr)) {
+                index = i
+                break
+            }
+        }
+
+        if (index < 0) {
+            index = dateStartIndex
+        }
+
+        const visibleCount = Math.max(10, Math.min(runtime.visibleCount, data.length))
+        runtime.visibleCount = visibleCount
+        runtime.viewStart = Math.max(0, index - visibleCount / 2)
+        runtime.viewStart = Math.min(runtime.viewStart, Math.max(data.length - visibleCount, 0))
+        runtime.isAutoScaled = true
+        drawCanvas()
+    }
+
+    const jumpToLastCandleOfDate = (dateStr: string) => {
+        const runtime = runtimeRef.current
+        const data = runtime.chartData[currentTfRef.current]
+        if (!data.length) {
+            window.alert('Load chart data first.')
+            return
+        }
+
+        // Normalize to YYYY-MM-DD
+        const cleanDate = dateStr.length > 10 ? dateStr.slice(0, 10) : dateStr
+
+        const dateStartIndex = getFirstIndexByDate(data, cleanDate)
+        if (dateStartIndex < 0) {
+            window.alert(`No data found for ${cleanDate}`)
+            return
+        }
+
+        // Scan forward to find the last candle on this date
+        let lastIndex = dateStartIndex
+        for (let i = dateStartIndex + 1; i < data.length; i += 1) {
+            if (data[i].time.slice(0, 10) === cleanDate) {
+                lastIndex = i
+            } else {
+                break
+            }
+        }
+
+        // Cap visibleCount to prevent viewStart overflow when zoomed out
+        const visibleCount = Math.max(10, Math.min(runtime.visibleCount, data.length, 200))
+        runtime.visibleCount = visibleCount
+        runtime.viewStart = Math.max(0, lastIndex - Math.floor(visibleCount / 2))
+        runtime.isAutoScaled = true
         drawCanvas()
     }
 
@@ -314,15 +438,17 @@ export function createTradingChartActions({
         clock: string,
     ) => {
         let day = startDay
-        while (true) {
+        let iterations = 0
+        while (iterations < 7) {
             const candle = findTimeByDayAndClock(data, day, clock)
             if (candle) return { day, candle }
 
             const previousDay = getPreviousDateString(day)
             if (previousDay === day) return null
-            if (!data.length || previousDay < data[0].time.slice(0, 10)) return null
             day = previousDay
+            iterations += 1
         }
+        return null
     }
 
     const findSessionOpenOnPreviousDay = (data: typeof runtimeRef.current.chartData.m1, selectedDay: string) => {
@@ -448,64 +574,108 @@ export function createTradingChartActions({
         }
 
         const generated: DrawingDraft[] = []
-        const boundaries = ['07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00'] as const
+        const boundaries = ['07:00', '08:30', '09:30', '10:00', '10:30', '11:00'] as const
 
         // 1. VerticalLineDrawing for each boundary time
         for (const clock of boundaries) {
             const candle = findTimeByDayAndClock(m1Data, dateStr, clock)
             if (!candle) continue
-            generated.push({ type: 'VLINE', time: candle.time, color: '#7c3aed' })
+            const vlineColor = clock === '08:30' ? '#f97316' : clock === '09:30' ? '#f59e0b' : 'rgba(0, 0, 0, 0.22)'
+            generated.push({ type: 'VLINE', time: candle.time, color: vlineColor })
         }
 
-        // 2. PM_HIGH / PM_LOW pairs for 4 premarket windows
-        const pmWindows: Array<{ start: string; end: string }> = [
-            { start: '07:00', end: '07:30' },
-            { start: '08:00', end: '08:30' },
-            { start: '09:00', end: '09:30' },
-            { start: '10:00', end: '10:30' },
-        ]
+        // 2. PM_HIGH / PM_LOW pairs for 5 premarket windows
+        const pmWindows: Array<{ start: string; end: string }> = []
 
-        const timeEleven = findTimeByDayAndClock(m1Data, dateStr, '11:00')
+        // London High/Low (02:00-05:00)
+        const londonCandles = getCandlesInTimeRange(m1Data, dateStr, '02:00', '05:00')
+        if (londonCandles.length > 0) {
+            const londonHigh = Math.max(...londonCandles.map((c) => c.high))
+            const londonLow = Math.min(...londonCandles.map((c) => c.low))
 
-        for (const w of pmWindows) {
-            const candles = getCandlesInTimeRange(m1Data, dateStr, w.start, w.end)
-            if (candles.length === 0) continue
-            const high = Math.max(...candles.map((c) => c.high))
-            const low = Math.min(...candles.map((c) => c.low))
+            const londonStart = findTimeByDayAndClock(m1Data, dateStr, '02:00')
+            const londonEnd = findTimeByDayAndClock(m1Data, dateStr, '05:00')
 
-            const startCandle = findTimeByDayAndClock(m1Data, dateStr, w.start)
-            if (!startCandle) continue
+            if (londonStart && londonEnd) {
+                generated.push({
+                    type: 'LONDON_HIGH',
+                    time: londonStart.time,
+                    price: londonHigh,
+                    lengthMinutes: 540,
+                    color: 'rgba(245, 158, 11, 0.9)',
+                } as DrawingDraft)
 
-            const endBoundary = findTimeByDayAndClock(m1Data, dateStr, w.end)
-            if (!endBoundary) continue
-
-            generated.push({
-                type: 'PM_HIGH',
-                time: startCandle.time,
-                price: high,
-                lengthMinutes: null,
-                endTime: timeEleven ? timeEleven.time : null,
-                breakScanStart: endBoundary.time,
-                color: 'rgba(59, 130, 246, 0.8)',
-            } as DrawingDraft)
-
-            generated.push({
-                type: 'PM_LOW',
-                time: startCandle.time,
-                price: low,
-                lengthMinutes: null,
-                endTime: timeEleven ? timeEleven.time : null,
-                breakScanStart: endBoundary.time,
-                color: 'rgba(239, 68, 68, 0.8)',
-            } as DrawingDraft)
+                generated.push({
+                    type: 'LONDON_LOW',
+                    time: londonStart.time,
+                    price: londonLow,
+                    lengthMinutes: 540,
+                    color: 'rgba(217, 119, 6, 0.9)',
+                } as DrawingDraft)
+            }
         }
 
-        // 3. FibDrawing for 4 opening range windows
+        // Previous Day PM High/Low (13:30-16:00 of previous day)
+        const prevDay = getPreviousDateString(dateStr)
+        const prevPmCandles = getCandlesInTimeRange(m1Data, prevDay, '13:30', '16:00')
+        if (prevPmCandles.length > 0) {
+            const prevPmHigh = Math.max(...prevPmCandles.map((c) => c.high))
+            const prevPmLow = Math.min(...prevPmCandles.map((c) => c.low))
+
+            const prevPmStart = findTimeByDayAndClock(m1Data, prevDay, '13:30')
+            const prevPmEnd = findTimeByDayAndClock(m1Data, prevDay, '16:00')
+
+            if (prevPmStart && prevPmEnd) {
+                generated.push({
+                    type: 'PREV_DAY_PM_HIGH',
+                    time: prevPmStart.time,
+                    price: prevPmHigh,
+                    lengthMinutes: 1440,
+                    color: 'rgba(20, 184, 166, 0.9)',
+                } as DrawingDraft)
+
+                generated.push({
+                    type: 'PREV_DAY_PM_LOW',
+                    time: prevPmStart.time,
+                    price: prevPmLow,
+                    lengthMinutes: 1440,
+                    color: 'rgba(13, 148, 136, 0.9)',
+                } as DrawingDraft)
+            }
+        }
+
+        // Previous Day AM High/Low (09:30-13:30 of previous day)
+        const prevDayAm = getPreviousDateString(dateStr)
+        const prevAmCandles = getCandlesInTimeRange(m1Data, prevDayAm, '09:30', '13:30')
+        if (prevAmCandles.length > 0) {
+            const prevAmHigh = Math.max(...prevAmCandles.map((c) => c.high))
+            const prevAmLow = Math.min(...prevAmCandles.map((c) => c.low))
+
+            const prevAmStart = findTimeByDayAndClock(m1Data, prevDayAm, '09:30')
+            const prevAmEnd = findTimeByDayAndClock(m1Data, prevDayAm, '13:30')
+
+            if (prevAmStart && prevAmEnd) {
+                generated.push({
+                    type: 'PREV_DAY_AM_HIGH',
+                    time: prevAmStart.time,
+                    price: prevAmHigh,
+                    lengthMinutes: 1560,
+                    color: 'rgba(168, 85, 247, 0.9)',
+                } as DrawingDraft)
+
+                generated.push({
+                    type: 'PREV_DAY_AM_LOW',
+                    time: prevAmStart.time,
+                    price: prevAmLow,
+                    lengthMinutes: 1560,
+                    color: 'rgba(126, 34, 206, 0.9)',
+                } as DrawingDraft)
+            }
+        }
+
+        // 3. FibDrawing for 5 opening range windows
         const fibWindows: Array<{ start: string; end: string }> = [
-            { start: '07:30', end: '08:00' },
-            { start: '08:30', end: '09:00' },
             { start: '09:30', end: '10:00' },
-            { start: '10:30', end: '11:00' },
         ]
 
         for (const w of fibWindows) {
@@ -530,19 +700,16 @@ export function createTradingChartActions({
                 price1: low,
                 price2: high,
                 templateKey: 'fibo_quadrant',
-                extendRight: false,
+                extendRight: true,
                 reverse,
                 lineStyle: 'normal',
                 lineWidth: 1.5,
-                levels: getDefaultFibLevels('fibo_quadrant'),
+                levels: getDefaultFibLevels('fibo_quadrant').map((l) => l.ratio === 0.5 ? { ...l, color: '#ef4444' } : l),
             })
         }
 
-        // 4. Macro rectangles (20-min windows: 6:50-7:10, 7:50-8:10, ..., 10:50-11:10)
+        // 4. Macro rectangles (20-min windows: 9:50-10:10, 10:50-11:10)
         const macroWindows: Array<{ start: string; end: string }> = [
-            { start: '06:50', end: '07:10' },
-            { start: '07:50', end: '08:10' },
-            { start: '08:50', end: '09:10' },
             { start: '09:50', end: '10:10' },
             { start: '10:50', end: '11:10' },
         ]
@@ -565,6 +732,84 @@ export function createTradingChartActions({
                 color: 'rgba(59, 130, 246, 0.15)',
                 border: 'rgba(59, 130, 246, 0.4)',
             })
+        }
+
+        // 5. Rectangle 6:30-8:00 high/low
+        const range630_800_candles = getCandlesInTimeRange(m1Data, dateStr, '06:30', '08:00')
+        if (range630_800_candles.length > 0) {
+            const range630High = Math.max(...range630_800_candles.map((c) => c.high))
+            const range630Low = Math.min(...range630_800_candles.map((c) => c.low))
+            const range630Start = findTimeByDayAndClock(m1Data, dateStr, '06:30')
+            if (range630Start) {
+                generated.push({
+                    type: 'FVG',
+                    time: range630Start.time,
+                    top: range630High,
+                    bot: range630Low,
+                    lengthMinutes: 90,
+                    color: 'rgba(147, 51, 234, 0.10)',
+                    border: 'rgba(147, 51, 234, 0.45)',
+                } as DrawingDraft)
+            }
+        }
+
+        // 6. NWOG — gap between most recent Sunday 18:00 open and prior Friday 16:14 close
+        // Find the most recent Sunday (going back from selected date)
+        const findMostRecentSunday = (d: string) => {
+            let date = new Date(`${d}T12:00:00`)
+            while (date.getDay() !== 0) {
+                date.setDate(date.getDate() - 1)
+            }
+            return date.toISOString().slice(0, 10)
+        }
+        const recentSunday = findMostRecentSunday(dateStr)
+        const nwogOpenCandle = findTimeByDayAndClock(m1Data, recentSunday, '18:00')
+        if (nwogOpenCandle) {
+            const nwogClosePrior = findPriorClockAcrossDays(m1Data, recentSunday, '16:14')
+            if (nwogClosePrior) {
+                generated.push(buildSessionGapDrawing('NWOG', nwogOpenCandle.time, nwogClosePrior.candle.close, nwogOpenCandle.open))
+            }
+        }
+
+        // 6. NDOG — gap between previous day 18:00 open and prior 16:14 close (Mon skip)
+        const dow = new Date(`${dateStr}T12:00:00`).getDay()
+        if (dow !== 1) {
+            const ndogOpenCandle = findSessionOpenOnPreviousDay(m1Data, dateStr)
+            if (ndogOpenCandle) {
+                const openDay = getPreviousDateString(dateStr)
+                const ndogClosePrior = findPriorClockAcrossDays(m1Data, openDay, '16:14')
+                if (ndogClosePrior) {
+                    generated.push(buildSessionGapDrawing('NDOG', ndogOpenCandle.time, ndogClosePrior.candle.close, ndogOpenCandle.open))
+                }
+            }
+        }
+
+        // 7. Open price horizontal lines (00:00, 08:30, 09:30) extending to 11:00
+        const openLineConfigs = [
+            { clock: '00:00', type: 'OPEN_0000' as const, lengthMinutes: 660, color: 'rgba(100, 116, 139, 0.9)' },
+            { clock: '08:30', type: 'OPEN_0830' as const, lengthMinutes: 150, color: 'rgba(100, 116, 139, 0.9)' },
+            { clock: '09:30', type: 'OPEN_0930' as const, lengthMinutes: 90, color: 'rgba(100, 116, 139, 0.9)' },
+        ]
+        for (const cfg of openLineConfigs) {
+            const candle = findTimeByDayAndClock(m1Data, dateStr, cfg.clock)
+            if (!candle) continue
+            generated.push({
+                type: cfg.type,
+                time: candle.time,
+                price: candle.open,
+                lengthMinutes: cfg.lengthMinutes,
+                color: cfg.color,
+            } as DrawingDraft)
+        }
+
+        // 8. ORG (Opening Range Gap) — 09:30 open vs prior 16:14 close
+        const orgOpenCandle = findTimeByDayAndClock(m1Data, dateStr, '09:30')
+        if (orgOpenCandle) {
+            const orgOpenIdx = m1Data.indexOf(orgOpenCandle)
+            const prev1614 = findPreviousClockClose(m1Data, orgOpenIdx, '16:14')
+            if (prev1614) {
+                generated.push(buildSessionGapDrawing('ORG', orgOpenCandle.time, prev1614.close, orgOpenCandle.open))
+            }
         }
 
         if (generated.length === 0) {
@@ -661,6 +906,39 @@ export function createTradingChartActions({
         for (let i = startIdx; i <= endIdx; i += 1) {
             if (m1Data[i].high > rangeHigh) rangeHigh = m1Data[i].high
             if (m1Data[i].low < rangeLow) rangeLow = m1Data[i].low
+        }
+
+        // Include London session (02:00-05:00) in Y range so London lines are visible
+        const londonRangeCandles = getCandlesInTimeRange(m1Data, dateStr, '02:00', '05:00')
+        for (const c of londonRangeCandles) {
+            if (c.high > rangeHigh) rangeHigh = c.high
+            if (c.low < rangeLow) rangeLow = c.low
+        }
+
+        // Include Previous Day PM session (13:30-16:00) in Y range
+        const prevDayForScale = getPreviousDateString(dateStr)
+        const prevPmRangeCandles = getCandlesInTimeRange(m1Data, prevDayForScale, '13:30', '16:00')
+        for (const c of prevPmRangeCandles) {
+            if (c.high > rangeHigh) rangeHigh = c.high
+            if (c.low < rangeLow) rangeLow = c.low
+        }
+
+        // Include Previous Day AM session (09:30-13:30) in Y range
+        const prevDayAmForScale = getPreviousDateString(dateStr)
+        const prevAmRangeCandles = getCandlesInTimeRange(m1Data, prevDayAmForScale, '09:30', '13:30')
+        for (const c of prevAmRangeCandles) {
+            if (c.high > rangeHigh) rangeHigh = c.high
+            if (c.low < rangeLow) rangeLow = c.low
+        }
+
+        // Include open prices (00:00, 08:30, 09:30) in Y range
+        const openScaleClocks = ['00:00', '08:30', '09:30']
+        for (const clock of openScaleClocks) {
+            const candle = findTimeByDayAndClock(m1Data, dateStr, clock)
+            if (candle) {
+                if (candle.open > rangeHigh) rangeHigh = candle.open
+                if (candle.open < rangeLow) rangeLow = candle.open
+            }
         }
 
         // 6. Set Y scale with 5% padding
@@ -985,11 +1263,14 @@ export function createTradingChartActions({
         setDrawMenu(null)
     }
 
-    const loadCsvFiles = createLoadCsvFiles({ runtimeRef, currentTfRef, drawCanvas })
+    const loadCsvFiles = createLoadCsvFiles({ runtimeRef, currentTfRef, drawCanvas, setChartLoading: setChartLoading! })
 
     return {
         changeTimeframe,
         jumpToDate,
+        jumpToLatest,
+        jumpToMinute,
+        jumpToLastCandleOfDate,
         addBacktestSection,
         toggleDrawMode,
         toggleDaySeparators,

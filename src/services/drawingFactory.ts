@@ -16,15 +16,17 @@ export function findPriorClockAcrossDays(
     clock: string,
 ): { day: string; candle: Candle } | null {
     let day = startDay
-    while (true) {
+    let iterations = 0
+    while (iterations < 7) {
         const candle = findTimeByDayAndClock(data, day, clock)
         if (candle) return { day, candle }
 
         const previousDay = getPreviousDateString(day)
         if (previousDay === day) return null
-        if (!data.length || previousDay < data[0].time.slice(0, 10)) return null
         day = previousDay
+        iterations += 1
     }
+    return null
 }
 
 export function findSessionOpenOnPreviousDay(data: Candle[], selectedDay: string): Candle | null {

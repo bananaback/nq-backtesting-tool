@@ -19,7 +19,7 @@ type BacktestSectionModalProps = {
 function BacktestSectionModal({ defaultName, onClose, onSubmit }: BacktestSectionModalProps) {
     const [name, setName] = useState(defaultName)
     const [date, setDate] = useState('')
-    const [time, setTime] = useState('')
+    const [time, setTime] = useState('09:30')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

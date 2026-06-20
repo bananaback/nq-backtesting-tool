@@ -453,7 +453,7 @@ export function drawTradingChart({
         const isSelected = runtime.selectedDrawingId === tool.id
         if (tool.type === 'VLINE') {
             ctx.save()
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)'
+            ctx.strokeStyle = tool.color || 'rgba(0, 0, 0, 0.22)'
             ctx.lineWidth = 1
             ctx.setLineDash([2, 4])
             ctx.beginPath()
@@ -786,6 +786,16 @@ export function drawTradingChart({
             ctx.strokeStyle = isSelected ? '#6d28d9' : tool.color
             ctx.lineWidth = isSelected ? 3 : 1
             ctx.stroke()
+            // Draw label for open price lines
+            if (tool.type === 'OPEN_0000' || tool.type === 'OPEN_0830' || tool.type === 'OPEN_0930') {
+                const label = tool.type === 'OPEN_0000' ? '0:00 Open' : tool.type === 'OPEN_0830' ? '8:30 Open' : '9:30 Open'
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                const labelX = Math.max(4, x + 4)
+                ctx.fillText(label, labelX, y - 4)
+                ctx.restore()
+            }
         }
     })
 

@@ -37,6 +37,7 @@ interface Drawing {
   endTime?: string
   breakScanStart?: string
   reverse?: boolean
+  extendRight?: boolean
   levels?: FibLevel[]
   price1614?: number
   price0930?: number
@@ -123,19 +124,21 @@ function findSessionOpenOnPreviousDay(candles: Candle[], selectedDay: string): C
 /** Find candle at clock time searching backward across prior days from startDay. @param candles - Candle array sorted by time. @param startDay - Start date in YYYY-MM-DD. @param clock - Time string in HH:MM. @returns Object with day and candle, or null. */
 function findPriorClockAcrossDays(candles: Candle[], startDay: string, clock: string): { day: string; candle: Candle } | null {
   let day = startDay
-  const firstDay = candles[0].time.slice(0, 10)
+  let iterations = 0
 
-  while (true) {
+  while (iterations < 7) {
     const candle = findTimeByDayAndClock(candles, day, clock)
     if (candle) {
       return { day, candle }
     }
     const previousDay = getPreviousDateString(day)
-    if (previousDay === day || previousDay < firstDay) {
+    if (previousDay === day) {
       return null
     }
     day = previousDay
+    iterations += 1
   }
+  return null
 }
 
 /** Find swing highs and lows in 7:00-11:00 range using 5-candle pattern. @param candles - Candles to search. @param date - Date string prefix. @returns Array of swing points with time, price, and type. */
@@ -173,21 +176,17 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
   let id = 1
 
   // 1. Vertical lines at :00 and :30 from 7:00 to 11:00
-  const boundaries = ['07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00']
+  const boundaries = ['07:00', '08:30', '09:30', '10:00', '10:30', '11:00']
   for (const clock of boundaries) {
     const candle = findTimeByDayAndClock(candles, date, clock)
     if (candle) {
-      drawings.push({ id: id++, type: 'VLINE', time: candle.time, color: '#7c3aed' })
+      const vlineColor = clock === '08:30' ? '#f97316' : clock === '09:30' ? '#f59e0b' : 'rgba(0, 0, 0, 0.22)'
+      drawings.push({ id: id++, type: 'VLINE', time: candle.time, color: vlineColor })
     }
   }
 
   // 2. PM_HIGH / PM_LOW pairs for 4 premarket windows
-  const pmWindows = [
-    { start: '07:00', end: '07:30' },
-    { start: '08:00', end: '08:30' },
-    { start: '09:00', end: '09:30' },
-    { start: '10:00', end: '10:30' },
-  ]
+  const pmWindows: { start: string; end: string }[] = []
 
   const timeEleven = findTimeByDayAndClock(candles, date, '11:00')
 
@@ -229,12 +228,107 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
     })
   }
 
+  // London High/Low (02:00-05:00)
+  const londonCandles = getCandlesInRange(candles, date, '02:00', '05:00')
+  if (londonCandles.length > 0) {
+    const londonHigh = Math.max(...londonCandles.map(c => c.high))
+    const londonLow = Math.min(...londonCandles.map(c => c.low))
+
+    const londonStart = findTimeByDayAndClock(candles, date, '02:00')
+    const londonEnd = findTimeByDayAndClock(candles, date, '05:00')
+
+    if (londonStart && londonEnd) {
+      // High line
+      drawings.push({
+        id: id++,
+        type: 'LONDON_HIGH',
+        time: londonStart.time,
+        price: londonHigh,
+        lengthMinutes: 540,
+        color: 'rgba(245, 158, 11, 0.9)',
+      })
+
+      // Low line
+      drawings.push({
+        id: id++,
+        type: 'LONDON_LOW',
+        time: londonStart.time,
+        price: londonLow,
+        lengthMinutes: 540,
+        color: 'rgba(217, 119, 6, 0.9)',
+      })
+    }
+  }
+
+  // Previous Day PM High/Low (13:30-16:00 of previous day)
+  const prevDay = getPreviousDateString(date)
+  const prevPmCandles = getCandlesInRange(candles, prevDay, '13:30', '16:00')
+  if (prevPmCandles.length > 0) {
+    const prevPmHigh = Math.max(...prevPmCandles.map(c => c.high))
+    const prevPmLow = Math.min(...prevPmCandles.map(c => c.low))
+
+    const prevPmStart = findTimeByDayAndClock(candles, prevDay, '13:30')
+    const prevPmEnd = findTimeByDayAndClock(candles, prevDay, '16:00')
+
+    if (prevPmStart && prevPmEnd) {
+      // High line
+      drawings.push({
+        id: id++,
+        type: 'PREV_DAY_PM_HIGH',
+        time: prevPmStart.time,
+        price: prevPmHigh,
+        lengthMinutes: 1440,
+        color: 'rgba(20, 184, 166, 0.9)',
+      })
+
+      // Low line
+      drawings.push({
+        id: id++,
+        type: 'PREV_DAY_PM_LOW',
+        time: prevPmStart.time,
+        price: prevPmLow,
+        lengthMinutes: 1440,
+        color: 'rgba(13, 148, 136, 0.9)',
+      })
+    }
+  }
+
+  // Previous Day AM High/Low (09:30-13:30 of previous day)
+  const prevDayAm = getPreviousDateString(date)
+  const prevAmCandles = getCandlesInRange(candles, prevDayAm, '09:30', '13:30')
+  if (prevAmCandles.length > 0) {
+    const prevAmHigh = Math.max(...prevAmCandles.map(c => c.high))
+    const prevAmLow = Math.min(...prevAmCandles.map(c => c.low))
+
+    const prevAmStart = findTimeByDayAndClock(candles, prevDayAm, '09:30')
+    const prevAmEnd = findTimeByDayAndClock(candles, prevDayAm, '13:30')
+
+    if (prevAmStart && prevAmEnd) {
+      // High line
+      drawings.push({
+        id: id++,
+        type: 'PREV_DAY_AM_HIGH',
+        time: prevAmStart.time,
+        price: prevAmHigh,
+        lengthMinutes: 1560,
+        color: 'rgba(168, 85, 247, 0.9)',
+      })
+
+      // Low line
+      drawings.push({
+        id: id++,
+        type: 'PREV_DAY_AM_LOW',
+        time: prevAmStart.time,
+        price: prevAmLow,
+        lengthMinutes: 1560,
+        color: 'rgba(126, 34, 206, 0.9)',
+      })
+    }
+  }
+
   // 3. Fibonacci retracements for 4 opening range windows
   const fibWindows = [
-    { start: '07:30', end: '08:00' },
-    { start: '08:30', end: '09:00' },
     { start: '09:30', end: '10:00' },
-    { start: '10:30', end: '11:00' },
   ]
 
   for (const w of fibWindows) {
@@ -261,21 +355,19 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
       price1: low,
       price2: high,
       reverse,
+      extendRight: true,
       levels: [
         { ratio: 0, label: '0', visible: true, color: '#000000' },
         { ratio: 0.25, label: '0.25', visible: true, color: '#000000' },
-        { ratio: 0.5, label: '0.5', visible: true, color: '#000000' },
+        { ratio: 0.5, label: '0.5', visible: true, color: '#ef4444' },
         { ratio: 0.75, label: '0.75', visible: true, color: '#000000' },
         { ratio: 1, label: '1', visible: true, color: '#000000' },
       ],
     })
   }
 
-  // 4. Macro rectangles (20-min windows: 6:50-7:10, 7:50-8:10, ..., 10:50-11:10)
+  // 4. Macro rectangles (20-min windows: 9:50-10:10, 10:50-11:10)
   const macroWindows = [
-    { start: '06:50', end: '07:10' },
-    { start: '07:50', end: '08:10' },
-    { start: '08:50', end: '09:10' },
     { start: '09:50', end: '10:10' },
     { start: '10:50', end: '11:10' },
   ]
@@ -300,6 +392,26 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
       color: 'rgba(59, 130, 246, 0.15)',
       border: 'rgba(59, 130, 246, 0.4)',
     })
+  }
+
+  // Rectangle 6:30-8:00 high/low
+  const range630_800_candles = getCandlesInRange(candles, date, '06:30', '08:00')
+  if (range630_800_candles.length > 0) {
+    const range630High = Math.max(...range630_800_candles.map(c => c.high))
+    const range630Low = Math.min(...range630_800_candles.map(c => c.low))
+    const range630Start = findTimeByDayAndClock(candles, date, '06:30')
+    if (range630Start) {
+      drawings.push({
+        id: id++,
+        type: 'FVG',
+        time: range630Start.time,
+        top: range630High,
+        bot: range630Low,
+        lengthMinutes: 90,
+        color: 'rgba(147, 51, 234, 0.10)',
+        border: 'rgba(147, 51, 234, 0.45)',
+      })
+    }
   }
 
   // 5. ORG (Opening Range Gap)
@@ -365,6 +477,25 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
         borderColor,
       })
     }
+  }
+
+  // Open price horizontal lines (00:00, 08:30, 09:30)
+  const openConfigs = [
+    { clock: '00:00', type: 'OPEN_0000', len: 660, color: 'rgba(100, 116, 139, 0.9)' },
+    { clock: '08:30', type: 'OPEN_0830', len: 150, color: 'rgba(100, 116, 139, 0.9)' },
+    { clock: '09:30', type: 'OPEN_0930', len: 90, color: 'rgba(100, 116, 139, 0.9)' },
+  ]
+  for (const cfg of openConfigs) {
+    const candle = findTimeByDayAndClock(candles, date, cfg.clock)
+    if (!candle) continue
+    drawings.push({
+      id: id++,
+      type: cfg.type,
+      time: candle.time,
+      price: candle.open,
+      lengthMinutes: cfg.len,
+      color: cfg.color,
+    })
   }
 
   // 8. 0h Open (midnight open price line)
@@ -514,7 +645,7 @@ function renderChart(allCandles: Candle[], drawings: Drawing[], date: string): B
 
     if (tool.type === 'VLINE') {
       ctx.save()
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)'
+      ctx.strokeStyle = tool.color || 'rgba(0, 0, 0, 0.22)'
       ctx.lineWidth = 1
       ctx.setLineDash([2, 4])
       ctx.beginPath()
@@ -522,7 +653,7 @@ function renderChart(allCandles: Candle[], drawings: Drawing[], date: string): B
       ctx.lineTo(x, chartHeight)
       ctx.stroke()
       ctx.restore()
-    } else if (tool.type === 'PM_HIGH' || tool.type === 'PM_LOW') {
+    } else if (tool.type === 'PM_HIGH' || tool.type === 'PM_LOW' || tool.type === 'OPEN_0000' || tool.type === 'OPEN_0830' || tool.type === 'OPEN_0930') {
       if (tool.price === undefined) continue
       const y = getY(tool.price)
 
@@ -561,6 +692,16 @@ function renderChart(allCandles: Candle[], drawings: Drawing[], date: string): B
       ctx.strokeStyle = tool.color || '#000000'
       ctx.lineWidth = 1
       ctx.stroke()
+      // Draw label for open price lines
+      if (tool.type === 'OPEN_0000' || tool.type === 'OPEN_0830' || tool.type === 'OPEN_0930') {
+        const label = tool.type === 'OPEN_0000' ? '0:00 Open' : tool.type === 'OPEN_0830' ? '8:30 Open' : '9:30 Open'
+        ctx.save()
+        ctx.fillStyle = tool.color || '#000000'
+        ctx.font = 'bold 10px sans-serif'
+        const labelX = Math.max(4, x + 4)
+        ctx.fillText(label, labelX, y - 4)
+        ctx.restore()
+      }
     } else if (tool.type === 'FIB') {
       if (tool.price1 === undefined || tool.price2 === undefined || !tool.time2) continue
       const index2 = getIndexByTime(allCandles, tool.time2)

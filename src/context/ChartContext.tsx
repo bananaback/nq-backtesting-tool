@@ -33,6 +33,9 @@ export interface ChartContextValue {
   changeTimeframe: (tf: Timeframe) => void
   setJumpDate: Dispatch<SetStateAction<string>>
   jumpToDate: (date: string) => void
+  jumpToLatest: () => void
+  jumpToMinute: (minuteStr: string) => void
+  jumpToLastCandleOfDate: (dateStr: string) => void
   toggleDrawMode: () => void
   toggleDaySeparators: () => void
   setObjectsOpen: Dispatch<SetStateAction<boolean>>
@@ -65,6 +68,8 @@ export interface ChartContextValue {
   closeMktAnnotDialog: () => void
   prepareDayView: (dateStr: string) => Promise<void>
   exportAllDays: () => Promise<void>
+  csvCacheRestored: boolean
+  chartLoading: boolean
 }
 
 export const ChartContext = createContext<ChartContextValue | null>(null)
@@ -98,6 +103,9 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     ohlc,
     changeTimeframe,
     jumpToDate,
+    jumpToMinute,
+    jumpToLatest,
+    jumpToLastCandleOfDate,
     setJumpDate,
     toggleDrawMode,
     toggleDaySeparators,
@@ -136,6 +144,8 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     closeMktAnnotDialog,
     prepareDayView,
     exportAllDays,
+    csvCacheRestored,
+    chartLoading,
   } = useTradingChartController()
 
   const value = useMemo<ChartContextValue>(() => ({
@@ -165,6 +175,9 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     changeTimeframe,
     setJumpDate,
     jumpToDate,
+    jumpToMinute,
+    jumpToLastCandleOfDate,
+    jumpToLatest,
     toggleDrawMode,
     toggleDaySeparators,
     setObjectsOpen,
@@ -191,6 +204,8 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     closeMktAnnotDialog,
     prepareDayView,
     exportAllDays,
+    csvCacheRestored,
+    chartLoading,
   }), [
     chartCanvasRef, yAxisCanvasRef, xAxisCanvasRef, chartStageRef,
     currentTF, jumpDate, drawMode, showDaySeparators, objectsOpen,
@@ -199,7 +214,10 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     fibPlacementStep, entryPlacementStep,
     candleFilterMinute, renderAfterFilterMinute, setRenderAfterFilterMinute, setCandleFilterMinute, isPickingCandleFilter,
     mktAnnotDialogOpen,
-    changeTimeframe, setJumpDate, jumpToDate,
+    changeTimeframe, setJumpDate,     jumpToDate,
+    jumpToMinute,
+    jumpToLastCandleOfDate,
+    jumpToLatest, jumpToMinute,
     toggleDrawMode, toggleDaySeparators,
     setObjectsOpen, loadCsvFiles, removeDrawing, createDrawing,
     handleChartMouseDown, handleChartWheel, handleChartMouseLeave,
@@ -210,7 +228,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     shiftCandleFilterMinute, startCandleFilterPick,
     addBacktestSection,
     confirmMarketAnnotations, closeMktAnnotDialog,
-    prepareDayView, exportAllDays,
+    prepareDayView, exportAllDays, csvCacheRestored, chartLoading,
   ])
 
   return <ChartContext.Provider value={value}>{children}</ChartContext.Provider>
