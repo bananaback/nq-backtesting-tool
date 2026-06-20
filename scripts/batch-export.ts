@@ -110,6 +110,27 @@ function getPreviousDateString(dateStr: string): string {
   return date.toISOString().slice(0, 10)
 }
 
+/** Get the previous trading day, skipping weekends.
+ * On Monday returns Friday (back 3 days). On Sunday returns Friday (back 2 days).
+ * All other days return the previous calendar day.
+ * @param dateStr - Date string in YYYY-MM-DD format.
+ * @returns Previous trading date in YYYY-MM-DD format.
+ */
+function getPreviousTradingDay(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00')
+  const dow = date.getDay()
+  if (dow === 1) {
+    // Monday → Friday
+    date.setDate(date.getDate() - 3)
+  } else if (dow === 0) {
+    // Sunday → Friday
+    date.setDate(date.getDate() - 2)
+  } else {
+    date.setDate(date.getDate() - 1)
+  }
+  return date.toISOString().slice(0, 10)
+}
+
 /** Find session open candle (18:00) on day prior to selectedDay. @param candles - Candle array sorted by time. @param selectedDay - Date string in YYYY-MM-DD format. @returns Candle at 18:00 on previous day, or null. */
 function findSessionOpenOnPreviousDay(candles: Candle[], selectedDay: string): Candle | null {
   const previousDay = getPreviousDateString(selectedDay)
@@ -174,6 +195,13 @@ function findSwingPoints(candles: Candle[], date: string): { time: string; price
 function generateAnnotations(candles: Candle[], date: string): Drawing[] {
   const drawings: Drawing[] = []
   let id = 1
+
+  // Helper: compute minutes from a start time to date 11:00
+  const targetEndMs = new Date(`${date}T11:00`).getTime()
+  const lengthTo1100 = (startTime: string) => {
+    const normalized = startTime.includes(' ') ? startTime.replace(' ', 'T') : startTime
+    return Math.round((targetEndMs - new Date(normalized).getTime()) / 60000)
+  }
 
   // 1. Vertical lines at :00 and :30 from 7:00 to 11:00
   const boundaries = ['07:00', '08:30', '09:30', '10:00', '10:30', '11:00']
@@ -260,8 +288,39 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
     }
   }
 
+  // Asian High/Low (20:00-00:00 of previous calendar day — Sunday for Monday)
+  const asianPrevDay = getPreviousDateString(date)
+  const asianPrevCandles = getCandlesInRange(candles, asianPrevDay, '20:00', '24:00')
+  const asianCurrCandles = getCandlesInRange(candles, date, '00:00', '00:01')
+  const asianCandles = [...asianPrevCandles, ...asianCurrCandles]
+  if (asianCandles.length > 0) {
+    const asianHigh = Math.max(...asianCandles.map(c => c.high))
+    const asianLow = Math.min(...asianCandles.map(c => c.low))
+
+    const asianStart = findTimeByDayAndClock(candles, asianPrevDay, '20:00')
+    if (asianStart) {
+      drawings.push({
+        id: id++,
+        type: 'ASIAN_HIGH',
+        time: asianStart.time,
+        price: asianHigh,
+        lengthMinutes: lengthTo1100(asianStart.time),
+        color: 'rgba(37, 99, 235, 0.9)',
+      })
+
+      drawings.push({
+        id: id++,
+        type: 'ASIAN_LOW',
+        time: asianStart.time,
+        price: asianLow,
+        lengthMinutes: lengthTo1100(asianStart.time),
+        color: 'rgba(29, 78, 216, 0.9)',
+      })
+    }
+  }
+
   // Previous Day PM High/Low (13:30-16:00 of previous day)
-  const prevDay = getPreviousDateString(date)
+  const prevDay = getPreviousTradingDay(date)
   const prevPmCandles = getCandlesInRange(candles, prevDay, '13:30', '16:00')
   if (prevPmCandles.length > 0) {
     const prevPmHigh = Math.max(...prevPmCandles.map(c => c.high))
@@ -277,7 +336,9 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
         type: 'PREV_DAY_PM_HIGH',
         time: prevPmStart.time,
         price: prevPmHigh,
-        lengthMinutes: 1440,
+        lengthMinutes: null,
+        endTime: timeEleven?.time,
+        breakScanStart: timeEleven?.time,
         color: 'rgba(20, 184, 166, 0.9)',
       })
 
@@ -287,14 +348,16 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
         type: 'PREV_DAY_PM_LOW',
         time: prevPmStart.time,
         price: prevPmLow,
-        lengthMinutes: 1440,
+        lengthMinutes: null,
+        endTime: timeEleven?.time,
+        breakScanStart: timeEleven?.time,
         color: 'rgba(13, 148, 136, 0.9)',
       })
     }
   }
 
   // Previous Day AM High/Low (09:30-13:30 of previous day)
-  const prevDayAm = getPreviousDateString(date)
+  const prevDayAm = getPreviousTradingDay(date)
   const prevAmCandles = getCandlesInRange(candles, prevDayAm, '09:30', '13:30')
   if (prevAmCandles.length > 0) {
     const prevAmHigh = Math.max(...prevAmCandles.map(c => c.high))
@@ -310,7 +373,9 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
         type: 'PREV_DAY_AM_HIGH',
         time: prevAmStart.time,
         price: prevAmHigh,
-        lengthMinutes: 1560,
+        lengthMinutes: null,
+        endTime: timeEleven?.time,
+        breakScanStart: timeEleven?.time,
         color: 'rgba(168, 85, 247, 0.9)',
       })
 
@@ -320,7 +385,9 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
         type: 'PREV_DAY_AM_LOW',
         time: prevAmStart.time,
         price: prevAmLow,
-        lengthMinutes: 1560,
+        lengthMinutes: null,
+        endTime: timeEleven?.time,
+        breakScanStart: timeEleven?.time,
         color: 'rgba(126, 34, 206, 0.9)',
       })
     }

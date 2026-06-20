@@ -1,6 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction, MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from 'react'
 import type { Candle, ChartRuntimeState, Drawing, DrawingDraft, DrawMenuState, Timeframe, ToolType } from '../chartTypes'
-import { clamp, getDefaultFibLevels, getFirstIndexByDate, getIndexByTime, getPreviousDateString, parseCsvText, roundTimeToTimeframe } from '../chartUtils'
+import { clamp, findCandleByTime, getDefaultFibLevels, getFirstIndexByDate, getIndexByTime, getPreviousDateString, getPreviousTradingDay, lowerBoundByTime, parseCsvText, roundTimeToTimeframe } from '../chartUtils'
 import { createLoadCsvFiles } from './loadTradingChartCsvFiles'
 
 type TradingChartActionsDeps = {
@@ -409,20 +409,7 @@ export function createTradingChartActions({
     }
 
     const findTimeByDayAndClock = (data: typeof runtimeRef.current.chartData.m1, day: string, clock: string) => {
-        for (let i = 0; i < data.length; i += 1) {
-            const t = data[i].time
-            if (!t.startsWith(day)) continue
-            // Extract HH:MM from time string for exact comparison
-            const hhmm = t.includes(' ')
-                ? t.split(' ')[1].slice(0, 5)
-                : t.includes('T')
-                    ? t.split('T')[1].slice(0, 5)
-                    : ''
-            if (hhmm === clock) {
-                return data[i]
-            }
-        }
-        return null
+        return findCandleByTime(data, day + 'T' + clock)
     }
 
     const findPreviousClockClose = (data: typeof runtimeRef.current.chartData.m1, beforeIndex: number, clock: string) => {
@@ -453,16 +440,7 @@ export function createTradingChartActions({
 
     const findSessionOpenOnPreviousDay = (data: typeof runtimeRef.current.chartData.m1, selectedDay: string) => {
         const previousDay = getPreviousDateString(selectedDay)
-        for (let i = 0; i < data.length; i += 1) {
-            if (!data[i].time.startsWith(previousDay)) continue
-            const timePart = data[i].time.includes(' ')
-                ? data[i].time.split(' ')[1]
-                : data[i].time.includes('T')
-                    ? data[i].time.split('T')[1]
-                    : ''
-            if (timePart.startsWith('18:00')) return data[i]
-        }
-        return null
+        return findCandleByTime(data, previousDay + 'T18:00')
     }
 
     const buildSessionGapDrawing = (
@@ -534,20 +512,11 @@ export function createTradingChartActions({
         startHHMM: string,
         endHHMM: string,
     ): Candle[] => {
-        const results: Candle[] = []
-        for (let i = 0; i < data.length; i += 1) {
-            const c = data[i]
-            if (!c.time.startsWith(dateStr)) continue
-            const hhmm = c.time.includes(' ')
-                ? c.time.split(' ')[1].slice(0, 5)
-                : c.time.includes('T')
-                    ? c.time.split('T')[1].slice(0, 5)
-                    : ''
-            if (hhmm >= startHHMM && hhmm < endHHMM) {
-                results.push(c)
-            }
-        }
-        return results
+        const startIdx = lowerBoundByTime(data, dateStr + 'T' + startHHMM)
+        const endIdx = lowerBoundByTime(data, dateStr + 'T' + endHHMM)
+        const slice = data.slice(startIdx, endIdx)
+        // Filter to ensure only this date's candles (handles date boundary edge cases)
+        return slice.filter((c) => c.time.slice(0, 10) === dateStr)
     }
 
     /**
@@ -565,8 +534,9 @@ export function createTradingChartActions({
      *               runtime.selectedDrawingId; calls setDrawings and setSelectedDrawingId.
      *   On failure: calls window.alert with an error message.
      */
-    const generateMarketAnnotations = (dateStr: string): void => {
+    const generateMarketAnnotations = async (dateStr: string): Promise<void> => {
         const runtime = runtimeRef.current
+
         const m1Data = runtime.chartData.m1
         if (!m1Data || m1Data.length === 0) {
             window.alert('Load M1 data first to generate market annotations.')
@@ -576,6 +546,16 @@ export function createTradingChartActions({
         const generated: DrawingDraft[] = []
         const boundaries = ['07:00', '08:30', '09:30', '10:00', '10:30', '11:00'] as const
 
+        // Helper: compute minutes from a start time string to dateStr 11:00
+        const targetEndMs = new Date(`${dateStr}T11:00`).getTime()
+        const lengthTo1100 = (startTime: string) => {
+            const normalized = startTime.includes(' ') ? startTime.replace(' ', 'T') : startTime
+            return Math.round((targetEndMs - new Date(normalized).getTime()) / 60000)
+        }
+
+        // 11:00 candle on the annotation date — used as endTime for cross-day lines
+        const candle1100 = findTimeByDayAndClock(m1Data, dateStr, '11:00')
+
         // 1. VerticalLineDrawing for each boundary time
         for (const clock of boundaries) {
             const candle = findTimeByDayAndClock(m1Data, dateStr, clock)
@@ -584,8 +564,7 @@ export function createTradingChartActions({
             generated.push({ type: 'VLINE', time: candle.time, color: vlineColor })
         }
 
-        // 2. PM_HIGH / PM_LOW pairs for 5 premarket windows
-        const pmWindows: Array<{ start: string; end: string }> = []
+        // 2. PM_HIGH / PM_LOW pairs for 5 premarket windows (currently unused)
 
         // London High/Low (02:00-05:00)
         const londonCandles = getCandlesInTimeRange(m1Data, dateStr, '02:00', '05:00')
@@ -601,7 +580,7 @@ export function createTradingChartActions({
                     type: 'LONDON_HIGH',
                     time: londonStart.time,
                     price: londonHigh,
-                    lengthMinutes: 540,
+                    lengthMinutes: lengthTo1100(londonStart.time),
                     color: 'rgba(245, 158, 11, 0.9)',
                 } as DrawingDraft)
 
@@ -609,14 +588,43 @@ export function createTradingChartActions({
                     type: 'LONDON_LOW',
                     time: londonStart.time,
                     price: londonLow,
-                    lengthMinutes: 540,
+                    lengthMinutes: lengthTo1100(londonStart.time),
                     color: 'rgba(217, 119, 6, 0.9)',
                 } as DrawingDraft)
             }
         }
 
+        // Asian High/Low (20:00-00:00 of previous calendar day — Sunday for Monday)
+        const asianPrevDay = getPreviousDateString(dateStr)
+        const asianPrevCandles = getCandlesInTimeRange(m1Data, asianPrevDay, '20:00', '24:00')
+        const asianCurrCandles = getCandlesInTimeRange(m1Data, dateStr, '00:00', '00:01')
+        const asianCandles = [...asianPrevCandles, ...asianCurrCandles]
+        if (asianCandles.length > 0) {
+            const asianHigh = Math.max(...asianCandles.map((c) => c.high))
+            const asianLow = Math.min(...asianCandles.map((c) => c.low))
+
+            const asianStart = findTimeByDayAndClock(m1Data, asianPrevDay, '20:00')
+            if (asianStart) {
+                generated.push({
+                    type: 'ASIAN_HIGH',
+                    time: asianStart.time,
+                    price: asianHigh,
+                    lengthMinutes: lengthTo1100(asianStart.time),
+                    color: 'rgba(37, 99, 235, 0.9)',
+                } as DrawingDraft)
+
+                generated.push({
+                    type: 'ASIAN_LOW',
+                    time: asianStart.time,
+                    price: asianLow,
+                    lengthMinutes: lengthTo1100(asianStart.time),
+                    color: 'rgba(29, 78, 216, 0.9)',
+                } as DrawingDraft)
+            }
+        }
+
         // Previous Day PM High/Low (13:30-16:00 of previous day)
-        const prevDay = getPreviousDateString(dateStr)
+        const prevDay = getPreviousTradingDay(dateStr)
         const prevPmCandles = getCandlesInTimeRange(m1Data, prevDay, '13:30', '16:00')
         if (prevPmCandles.length > 0) {
             const prevPmHigh = Math.max(...prevPmCandles.map((c) => c.high))
@@ -626,11 +634,14 @@ export function createTradingChartActions({
             const prevPmEnd = findTimeByDayAndClock(m1Data, prevDay, '16:00')
 
             if (prevPmStart && prevPmEnd) {
+                const endTime = candle1100?.time
                 generated.push({
                     type: 'PREV_DAY_PM_HIGH',
                     time: prevPmStart.time,
                     price: prevPmHigh,
-                    lengthMinutes: 1440,
+                    lengthMinutes: null,
+                    endTime,
+                    breakScanStart: endTime,
                     color: 'rgba(20, 184, 166, 0.9)',
                 } as DrawingDraft)
 
@@ -638,14 +649,16 @@ export function createTradingChartActions({
                     type: 'PREV_DAY_PM_LOW',
                     time: prevPmStart.time,
                     price: prevPmLow,
-                    lengthMinutes: 1440,
+                    lengthMinutes: null,
+                    endTime,
+                    breakScanStart: endTime,
                     color: 'rgba(13, 148, 136, 0.9)',
                 } as DrawingDraft)
             }
         }
 
         // Previous Day AM High/Low (09:30-13:30 of previous day)
-        const prevDayAm = getPreviousDateString(dateStr)
+        const prevDayAm = getPreviousTradingDay(dateStr)
         const prevAmCandles = getCandlesInTimeRange(m1Data, prevDayAm, '09:30', '13:30')
         if (prevAmCandles.length > 0) {
             const prevAmHigh = Math.max(...prevAmCandles.map((c) => c.high))
@@ -655,11 +668,14 @@ export function createTradingChartActions({
             const prevAmEnd = findTimeByDayAndClock(m1Data, prevDayAm, '13:30')
 
             if (prevAmStart && prevAmEnd) {
+                const endTime = candle1100?.time
                 generated.push({
                     type: 'PREV_DAY_AM_HIGH',
                     time: prevAmStart.time,
                     price: prevAmHigh,
-                    lengthMinutes: 1560,
+                    lengthMinutes: null,
+                    endTime,
+                    breakScanStart: endTime,
                     color: 'rgba(168, 85, 247, 0.9)',
                 } as DrawingDraft)
 
@@ -667,7 +683,9 @@ export function createTradingChartActions({
                     type: 'PREV_DAY_AM_LOW',
                     time: prevAmStart.time,
                     price: prevAmLow,
-                    lengthMinutes: 1560,
+                    lengthMinutes: null,
+                    endTime,
+                    breakScanStart: endTime,
                     color: 'rgba(126, 34, 206, 0.9)',
                 } as DrawingDraft)
             }
@@ -736,10 +754,10 @@ export function createTradingChartActions({
 
         // 5. Rectangle 6:30-8:00 high/low
         const range630_800_candles = getCandlesInTimeRange(m1Data, dateStr, '06:30', '08:00')
+        const range630Start = range630_800_candles.length > 0 ? findTimeByDayAndClock(m1Data, dateStr, '06:30') : null
         if (range630_800_candles.length > 0) {
             const range630High = Math.max(...range630_800_candles.map((c) => c.high))
             const range630Low = Math.min(...range630_800_candles.map((c) => c.low))
-            const range630Start = findTimeByDayAndClock(m1Data, dateStr, '06:30')
             if (range630Start) {
                 generated.push({
                     type: 'FVG',
@@ -751,6 +769,27 @@ export function createTradingChartActions({
                     border: 'rgba(147, 51, 234, 0.45)',
                 } as DrawingDraft)
             }
+        }
+
+        // 5b. Premarket 6:30-8:00 High/Low lines (with text labels)
+        if (range630_800_candles.length > 0 && range630Start) {
+            const preHigh = Math.max(...range630_800_candles.map((c) => c.high))
+            const preLow = Math.min(...range630_800_candles.map((c) => c.low))
+            generated.push({
+                type: 'PRE_HIGH',
+                time: range630Start.time,
+                price: preHigh,
+                lengthMinutes: lengthTo1100(range630Start.time),
+                color: 'rgba(236, 72, 153, 0.9)',
+            } as DrawingDraft)
+
+            generated.push({
+                type: 'PRE_LOW',
+                time: range630Start.time,
+                price: preLow,
+                lengthMinutes: lengthTo1100(range630Start.time),
+                color: 'rgba(190, 24, 93, 0.9)',
+            } as DrawingDraft)
         }
 
         // 6. NWOG — gap between most recent Sunday 18:00 open and prior Friday 16:14 close
@@ -891,12 +930,25 @@ export function createTradingChartActions({
             return
         }
 
-        // 3. Calculate visibleCount to show 6:30-11:30 (300 minutes)
-        const visibleCount = endIdx - startIdx + 1
-        runtime.visibleCount = clamp(visibleCount, 10, Math.max(data.length, 10))
-
-        // 4. Set viewStart to center on 6:30
-        runtime.viewStart = clamp(startIdx - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
+        // 3. Find 6:30 and 11:30 in current TF data for viewport positioning
+        const viewStartCandle = findTimeByDayAndClock(data, dateStr, '06:30')
+        const viewEndCandle = findTimeByDayAndClock(data, dateStr, '11:30')
+        if (viewStartCandle && viewEndCandle) {
+            const viewStartIdx = getIndexByTime(data, viewStartCandle.time)
+            const viewEndIdx = getIndexByTime(data, viewEndCandle.time)
+            if (viewStartIdx !== -1 && viewEndIdx !== -1) {
+                // Calculate visibleCount to show 6:30-11:30 in current TF
+                const visibleCount = viewEndIdx - viewStartIdx + 1
+                runtime.visibleCount = clamp(visibleCount, 10, Math.max(data.length, 10))
+                // Set viewStart to center on 6:30
+                runtime.viewStart = clamp(viewStartIdx - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
+            }
+        } else {
+            // Fallback: current TF lacks exact 06:30/11:30 candles (e.g., H1+)
+            // Position view at the date's first candle with a reasonable visible window
+            runtime.visibleCount = clamp(20, 10, Math.max(data.length, 10))
+            runtime.viewStart = clamp(index - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
+        }
 
         // 5. Calculate high/low of 6:30-11:30 range for Y scale
         let rangeHigh = -Infinity
@@ -914,7 +966,7 @@ export function createTradingChartActions({
         }
 
         // Include Previous Day PM session (13:30-16:00) in Y range
-        const prevDayForScale = getPreviousDateString(dateStr)
+        const prevDayForScale = getPreviousTradingDay(dateStr)
         const prevPmRangeCandles = getCandlesInTimeRange(m1Data, prevDayForScale, '13:30', '16:00')
         for (const c of prevPmRangeCandles) {
             if (c.high > rangeHigh) rangeHigh = c.high
@@ -922,7 +974,7 @@ export function createTradingChartActions({
         }
 
         // Include Previous Day AM session (09:30-13:30) in Y range
-        const prevDayAmForScale = getPreviousDateString(dateStr)
+        const prevDayAmForScale = getPreviousTradingDay(dateStr)
         const prevAmRangeCandles = getCandlesInTimeRange(m1Data, prevDayAmForScale, '09:30', '13:30')
         for (const c of prevAmRangeCandles) {
             if (c.high > rangeHigh) rangeHigh = c.high
@@ -946,7 +998,7 @@ export function createTradingChartActions({
         runtime.isAutoScaled = false
 
         // 7. Generate market annotations
-        generateMarketAnnotations(dateStr)
+        await generateMarketAnnotations(dateStr)
 
         // 8. Hide top bar
         if (onHideTopBar) onHideTopBar()

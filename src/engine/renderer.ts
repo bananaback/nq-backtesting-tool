@@ -787,6 +787,7 @@ export function drawTradingChart({
             ctx.lineWidth = isSelected ? 3 : 1
             ctx.stroke()
             // Draw label for open price lines
+            // Draw label for open price lines and Asian range lines
             if (tool.type === 'OPEN_0000' || tool.type === 'OPEN_0830' || tool.type === 'OPEN_0930') {
                 const label = tool.type === 'OPEN_0000' ? '0:00 Open' : tool.type === 'OPEN_0830' ? '8:30 Open' : '9:30 Open'
                 ctx.save()
@@ -794,6 +795,76 @@ export function drawTradingChart({
                 ctx.font = 'bold 10px sans-serif'
                 const labelX = Math.max(4, x + 4)
                 ctx.fillText(label, labelX, y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'ASIAN_HIGH') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Asian H', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'ASIAN_LOW') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Asian L', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'LONDON_HIGH') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('London H', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'LONDON_LOW') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('London L', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'PREV_DAY_PM_HIGH') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Prev PM H', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'PREV_DAY_PM_LOW') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Prev PM L', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'PREV_DAY_AM_HIGH') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Prev AM H', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'PREV_DAY_AM_LOW') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Prev AM L', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'PRE_HIGH') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Pre H', Math.max(4, x + 4), y - 4)
+                ctx.restore()
+            }
+            if (tool.type === 'PRE_LOW') {
+                ctx.save()
+                ctx.fillStyle = tool.color
+                ctx.font = 'bold 10px sans-serif'
+                ctx.fillText('Pre L', Math.max(4, x + 4), y - 4)
                 ctx.restore()
             }
         }

@@ -1,7 +1,6 @@
 import type { RefObject } from 'react'
 import type { ChartRuntimeState, Timeframe } from '../chartTypes'
 import { parseCsvText } from '../chartUtils'
-import { saveCsvCache } from '../utils/csvCache'
 
 type LoadTradingChartCsvFilesDeps = {
     runtimeRef: RefObject<ChartRuntimeState>
@@ -19,7 +18,6 @@ export function createLoadCsvFiles({ runtimeRef, currentTfRef, drawCanvas, setCh
         // Defer file reading so React paints the spinner before heavy work blocks the main thread
         requestAnimationFrame(() => {
             let processed = 0
-            const cachedEntries: Array<{ name: string; text: string }> = []
             Array.from(files).forEach((file) => {
                 const reader = new FileReader()
                 reader.onload = (event) => {
@@ -32,7 +30,6 @@ export function createLoadCsvFiles({ runtimeRef, currentTfRef, drawCanvas, setCh
                     runtimeRef.current.sourceFiles[tf] = file
                     runtimeRef.current.chartData[tf] = parsedData
                     processed += 1
-                    cachedEntries.push({ name: file.name, text })
 
                     if (processed === files.length) {
                         const currentData = runtimeRef.current.chartData[currentTfRef.current]
@@ -44,15 +41,12 @@ export function createLoadCsvFiles({ runtimeRef, currentTfRef, drawCanvas, setCh
 
                         drawCanvas()
 
-                        // Persist to IndexedDB cache for auto-restore next session
-                        saveCsvCache(cachedEntries).finally(() => {
-                            // Wait for browser paint pipeline + minimum display time
+                        // Wait for browser paint pipeline + minimum display time
+                        requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
-                                requestAnimationFrame(() => {
-                                    setTimeout(() => {
-                                        setChartLoading(false)
-                                    }, 250)
-                                })
+                                setTimeout(() => {
+                                    setChartLoading(false)
+                                }, 250)
                             })
                         })
                     }

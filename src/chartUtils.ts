@@ -1,5 +1,5 @@
 export { TIMEFRAMES, DRAW_TOOL_OPTIONS, FIB_TEMPLATES, getDefaultFibLevels, getFibTemplateLabel, getToolLabel } from './constants/chart'
 export { clamp } from './utils/math'
-export { getTimeframeMinutes, roundTimeToTimeframe, getPreviousDateString, isMidnightCandle, formatObjectTime, formatAxisTime, getIndexByTime, getFirstIndexByDate } from './utils/time'
+export { getTimeframeMinutes, roundTimeToTimeframe, getPreviousDateString, getPreviousTradingDay, isMidnightCandle, formatObjectTime, formatAxisTime, getIndexByTime, getFirstIndexByDate, lowerBoundByTime, findCandleByTime } from './utils/time'
 export { parseCsvText } from './utils/csv'
 export { getFibLevelPrice, getFibLineDash, getEntryRR, computeEntryStatus, snapPriceToCandleOHLC, getDrawingLengthMinutes } from './utils/drawing'

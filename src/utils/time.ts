@@ -33,6 +33,27 @@ export function getPreviousDateString(dateStr: string) {
     return date.toISOString().slice(0, 10)
 }
 
+/** Get the previous trading day, skipping weekends.
+ * On Monday returns Friday (back 3 days). On Sunday returns Friday (back 2 days).
+ * All other days return the previous calendar day.
+ * @param dateStr - Date string in YYYY-MM-DD format.
+ * @returns Previous trading date in YYYY-MM-DD format.
+ */
+export function getPreviousTradingDay(dateStr: string) {
+    const date = new Date(`${dateStr}T12:00:00`)
+    const dow = date.getDay()
+    if (dow === 1) {
+        // Monday → Friday
+        date.setDate(date.getDate() - 3)
+    } else if (dow === 0) {
+        // Sunday → Friday
+        date.setDate(date.getDate() - 2)
+    } else {
+        date.setDate(date.getDate() - 1)
+    }
+    return date.toISOString().slice(0, 10)
+}
+
 export function isMidnightCandle(time: string) {
     const timePart = time.includes(' ') ? time.split(' ')[1] : time.includes('T') ? time.split('T')[1] : time
     return timePart.startsWith('00:00')
@@ -68,5 +89,46 @@ export function getIndexByTime(data: Candle[], timeStr: string) {
 }
 
 export function getFirstIndexByDate(data: Candle[], dateStr: string) {
-    return data.findIndex((candle) => candle.time.slice(0, 10) === dateStr)
+    return lowerBoundByTime(data, dateStr + 'T00:00')
+}
+
+/** Normalize time string to consistent "YYYY-MM-DDTHH:MM" format.
+ *  Handles both "YYYY-MM-DD HH:MM" (space) and "YYYY-MM-DDTHH:MM" (T) inputs. */
+function normKey(time: string): string {
+    if (time.length >= 16 && time[10] === ' ') {
+        return time.slice(0, 10) + 'T' + time.slice(11, 16)
+    }
+    return time.slice(0, 16)
+}
+
+/** Binary search for first index where data[i].time >= targetTime.
+ *  Returns insertion point (0..data.length) if no exact match. */
+export function lowerBoundByTime(data: Candle[], targetTime: string): number {
+    const target = normKey(targetTime)
+    let lo = 0
+    let hi = data.length
+    while (lo < hi) {
+        const mid = (lo + hi) >>> 1
+        if (normKey(data[mid].time) < target) {
+            lo = mid + 1
+        } else {
+            hi = mid
+        }
+    }
+    return lo
+}
+
+/** Binary search for exact candle at targetTime. Returns candle or null. */
+export function findCandleByTime(data: Candle[], targetTime: string): Candle | null {
+    const target = normKey(targetTime)
+    let lo = 0
+    let hi = data.length - 1
+    while (lo <= hi) {
+        const mid = (lo + hi) >>> 1
+        const cmp = normKey(data[mid].time).localeCompare(target)
+        if (cmp === 0) return data[mid]
+        if (cmp < 0) lo = mid + 1
+        else hi = mid - 1
+    }
+    return null
 }

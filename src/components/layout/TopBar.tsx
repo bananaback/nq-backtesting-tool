@@ -80,7 +80,7 @@ function TopBar({
                         multiple
                         onChange={(event: ChangeEvent<HTMLInputElement>) => ctx.loadCsvFiles(event.target.files)}
                     />
-                    <span>Load CSVs{ctx.csvCacheRestored ? <small style={{ marginLeft: 4, color: '#22c55e', fontWeight: 700, fontSize: '0.65rem' }}>● cached</small> : null}</span>
+                    <span>Load CSVs</span>
                 </label>
 
                 <button type="button" className={isBacktestMode ? 'action-btn is-on' : 'action-btn'} onClick={onToggleBacktest}>

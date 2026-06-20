@@ -8,8 +8,6 @@ import { drawTradingChart } from '../chartRender'
 import { resizeTradingChart } from '../chartResize'
 import { createTradingChartActions } from './useTradingChartActions'
 import { bindTradingChartWindowEvents } from './useTradingChartWindow'
-import { loadCsvCache, hasCsvCache } from '../utils/csvCache'
-import { parseCsvText } from '../chartUtils'
 
 type UseTradingChartControllerReturn = {
     chartCanvasRef: RefObject<HTMLCanvasElement | null>
@@ -65,7 +63,6 @@ type UseTradingChartControllerReturn = {
     exitFullscreenRef: RefObject<(() => void) | null>
     onHideTopBarRef: RefObject<(() => void) | null>
     mktAnnotDialogOpen: boolean
-    csvCacheRestored: boolean
     chartLoading: boolean
     confirmMarketAnnotations: (dateStr: string) => void
     closeMktAnnotDialog: () => void
@@ -141,46 +138,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
     const [renderAfterFilterMinute, setRenderAfterFilterMinute] = useState(true)
     const [isPickingCandleFilter, setIsPickingCandleFilter] = useState(false)
     const [mktAnnotDialogOpen, setMktAnnotDialogOpen] = useState(false)
-    const [csvCacheRestored, setCsvCacheRestored] = useState(false)
     const [chartLoading, setChartLoading] = useState(false)
-
-    useEffect(() => {
-        const finishLoading = () => {
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        setChartLoading(false)
-                    }, 250)
-                })
-            })
-        }
-
-        setChartLoading(true)
-        hasCsvCache().then((hasCache) => {
-            if (!hasCache) { finishLoading(); return }
-            loadCsvCache().then((entries) => {
-                if (entries.length === 0) { finishLoading(); return }
-                for (const entry of entries) {
-                    const parsedData = parseCsvText(entry.text)
-                    const tfMatch = entry.name.match(/_(m1|m5|m15|h1)\./i)
-                    const tf = (tfMatch?.[1].toLowerCase() as Timeframe) || currentTfRef.current
-                    runtimeRef.current.chartData[tf] = parsedData
-                }
-                const currentData = runtimeRef.current.chartData[currentTfRef.current]
-                if (currentData.length > 0) {
-                    runtimeRef.current.visibleCount = Math.min(100, currentData.length)
-                    runtimeRef.current.viewStart = Math.max(0, currentData.length - runtimeRef.current.visibleCount)
-                    runtimeRef.current.isAutoScaled = true
-                }
-                setCsvCacheRestored(true)
-                finishLoading()
-            }).catch(() => {
-                finishLoading()
-            })
-        }).catch(() => {
-            finishLoading()
-        })
-    }, [])
 
     const shiftCandleFilterMinute = (deltaMinutes: number) => {
         if (!candleFilterMinute) return
@@ -380,9 +338,9 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         }
     }, [prepareDayView, chartCanvasRef, yAxisCanvasRef, xAxisCanvasRef, runtimeRef, drawCanvas])
 
-    const confirmMarketAnnotations = (dateStr: string) => {
+    const confirmMarketAnnotations = async (dateStr: string) => {
         setMktAnnotDialogOpen(false)
-        generateMarketAnnotations(dateStr)
+        await generateMarketAnnotations(dateStr)
         drawCanvas()
     }
 
@@ -533,7 +491,6 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         exitFullscreenRef,
         onHideTopBarRef,
         mktAnnotDialogOpen,
-        csvCacheRestored,
         chartLoading,
         confirmMarketAnnotations,
         closeMktAnnotDialog,

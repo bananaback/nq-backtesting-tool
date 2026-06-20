@@ -68,7 +68,6 @@ export interface ChartContextValue {
   closeMktAnnotDialog: () => void
   prepareDayView: (dateStr: string) => Promise<void>
   exportAllDays: () => Promise<void>
-  csvCacheRestored: boolean
   chartLoading: boolean
 }
 
@@ -144,7 +143,6 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     closeMktAnnotDialog,
     prepareDayView,
     exportAllDays,
-    csvCacheRestored,
     chartLoading,
   } = useTradingChartController()
 
@@ -204,7 +202,6 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     closeMktAnnotDialog,
     prepareDayView,
     exportAllDays,
-    csvCacheRestored,
     chartLoading,
   }), [
     chartCanvasRef, yAxisCanvasRef, xAxisCanvasRef, chartStageRef,
@@ -228,7 +225,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     shiftCandleFilterMinute, startCandleFilterPick,
     addBacktestSection,
     confirmMarketAnnotations, closeMktAnnotDialog,
-    prepareDayView, exportAllDays, csvCacheRestored, chartLoading,
+    prepareDayView, exportAllDays, chartLoading,
   ])
 
   return <ChartContext.Provider value={value}>{children}</ChartContext.Provider>
