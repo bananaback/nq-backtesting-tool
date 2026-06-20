@@ -31,3 +31,19 @@ export_logs.txt
 1000000000$/
 *.zip
 .codegraph/
+
+# DeepSeek / agent team workflow files
+DS_BLUEPRINT.md
+DS_CONTEXT.md
+DS_STATE.md
+DS_WORKFLOW.md
+OC_WORKFLOW.md
+.opencode/agents/ds-*.md
+.opencode/agents/oc-*.md
+
+# Legacy agent/workflow files (no longer tracked)
+.opencode/agents/
+AGENTS.md
+PLAN.md
+WORKING_STATE.md
+lite-starter-kit/
