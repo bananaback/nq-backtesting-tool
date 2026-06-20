@@ -379,12 +379,19 @@ export async function prepareDayView(
         return
     }
 
-    // 3. Calculate visibleCount to show 6:30-11:30 (300 minutes)
-    const visibleCount = endIdx - startIdx + 1
+    // 3. Calculate visibleCount to cover 6:30-11:30 range in current timeframe
+    const startTime = m1Data[startIdx].time
+    const endTime = m1Data[endIdx].time
+    const tfStartIdx = getIndexByTime(data, startTime)
+    const tfEndIdx = getIndexByTime(data, endTime)
+    const visibleCount = tfEndIdx >= 0 && tfStartIdx >= 0
+        ? tfEndIdx - tfStartIdx + 1
+        : endIdx - startIdx + 1
     runtime.visibleCount = clamp(visibleCount, 10, Math.max(data.length, 10))
 
-    // 4. Set viewStart to center on 6:30
-    runtime.viewStart = clamp(startIdx - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
+    // 4. Set viewStart to center on 6:30 in the current timeframe's data
+    const viewStartIdx = tfStartIdx >= 0 ? tfStartIdx : 0
+    runtime.viewStart = clamp(viewStartIdx - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
 
     // 5. Calculate high/low of 6:30-11:30 range for Y scale
     let rangeHigh = -Infinity

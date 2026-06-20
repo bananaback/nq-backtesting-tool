@@ -214,9 +214,7 @@ export function bindTradingChartWindowEvents({
                         }
                         runtime.drawingIdCounter += 1
                         runtime.drawings = [...runtime.drawings, nextDrawing]
-                        runtime.selectedDrawingId = newId
                         setDrawings(runtime.drawings)
-                        setSelectedDrawingId(newId)
                         setFibPlacementStep(null)
                         cancelFibPlacement()
                         toggleDrawMode()
@@ -314,9 +312,7 @@ export function bindTradingChartWindowEvents({
                     }
                     runtime.drawingIdCounter += 1
                     runtime.drawings = [...runtime.drawings, nextDrawing]
-                    runtime.selectedDrawingId = newId
                     setDrawings(runtime.drawings)
-                    setSelectedDrawingId(newId)
                     runtime.pendingEntryPlacement = null
                     setEntryPlacementStep(null)
                     toggleDrawMode()

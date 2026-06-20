@@ -825,9 +825,7 @@ export function createTradingChartActions({
         runtime.drawings = nextDrawings
         setDrawings(nextDrawings)
 
-        const newestId = runtime.drawingIdCounter - 1
-        runtime.selectedDrawingId = newestId
-        setSelectedDrawingId && setSelectedDrawingId(newestId)
+        // Do not auto-select after drawing creation
     }
 
     /**
@@ -1139,9 +1137,7 @@ export function createTradingChartActions({
                     runtime.drawings = nextDrawings
                     setDrawings(nextDrawings)
 
-                    const newestId = runtime.drawingIdCounter - 1
-                    runtime.selectedDrawingId = newestId
-                    setSelectedDrawingId && setSelectedDrawingId(newestId)
+                    // Do not auto-select after drawing creation
 
                     const label = type === 'ORG_RECENT_5' ? 'ORG' : 'NDOG/NWOG'
                     window.alert(`Added ${generated.length} recent ${label} gap(s) to the object list.`)
@@ -1248,10 +1244,7 @@ export function createTradingChartActions({
             runtime.drawingIdCounter += 1
             runtime.drawings = nextDrawings
             setDrawings(nextDrawings)
-            // select newly created drawing
-            const newId = runtime.drawingIdCounter - 1
-            runtime.selectedDrawingId = newId
-            setSelectedDrawingId && setSelectedDrawingId(newId)
+            // Do not auto-select after drawing creation
             drawModeRef.current = false
             setDrawMode(false)
         }

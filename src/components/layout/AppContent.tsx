@@ -3,7 +3,6 @@ import TopBar from './TopBar'
 import ChartStage from '../chart/ChartStage'
 import MarketAnnotationsDialog from '../modals/MarketAnnotationsDialog'
 import { useEffect, useState, useCallback } from 'react'
-import { getPreviousDateString } from '../../utils/time'
 import JumpDateModal from '../modals/JumpDateModal'
 
 function AppContent() {
@@ -126,7 +125,13 @@ function AppContent() {
 
   const handlePrevDay = useCallback(() => {
     if (!ctx.jumpDate) return
-    const prevDate = getPreviousDateString(ctx.jumpDate)
+    const date = new Date(`${ctx.jumpDate}T12:00:00`)
+    date.setDate(date.getDate() - 1)
+    // Skip weekends (0=Sun, 6=Sat)
+    while (date.getDay() === 0 || date.getDay() === 6) {
+      date.setDate(date.getDate() - 1)
+    }
+    const prevDate = date.toISOString().slice(0, 10)
     ctx.prepareDayView(prevDate)
   }, [ctx.jumpDate, ctx.prepareDayView])
 
@@ -134,6 +139,10 @@ function AppContent() {
     if (!ctx.jumpDate) return
     const date = new Date(`${ctx.jumpDate}T12:00:00`)
     date.setDate(date.getDate() + 1)
+    // Skip weekends (0=Sun, 6=Sat)
+    while (date.getDay() === 0 || date.getDay() === 6) {
+      date.setDate(date.getDate() + 1)
+    }
     const nextDate = date.toISOString().slice(0, 10)
     ctx.prepareDayView(nextDate)
   }, [ctx.jumpDate, ctx.prepareDayView])
@@ -169,10 +178,6 @@ function AppContent() {
 
       {!isTopBarVisible ? (
         <div className="fullscreen-controls" aria-label="Fullscreen controls">
-          <button type="button" className="topbar-float-toggle" onClick={() => setIsTopBarVisible(true)} title="Show Top Bar">
-            ⛶
-          </button>
-
           {isBacktestMode ? (
             <div className="backtest-float-dock" aria-label="Backtest controls">
               <div className="backtest-float-dock__tf" role="tablist" aria-label="Timeframes">
@@ -234,20 +239,32 @@ function AppContent() {
                 type="button"
                 className="backtest-float-dock__btn"
                 onClick={handlePrevDay}
-                title="Previous day"
+                title="Previous trading day"
               >
                 ◀ Prev Day
               </button>
               <button
                 type="button"
                 className="backtest-float-dock__btn"
+                onClick={() => { if (ctx.jumpDate) ctx.jumpToDate(ctx.jumpDate) }}
+                title="Jump back to current annotated day"
+              >
+                📍 Current
+              </button>
+              <button
+                type="button"
+                className="backtest-float-dock__btn"
                 onClick={handleNextDay}
-                title="Next day"
+                title="Next trading day"
               >
                 Next Day ▶
               </button>
             </div>
           ) : null}
+
+          <button type="button" className="topbar-float-toggle" onClick={() => setIsTopBarVisible(true)} title="Show Top Bar">
+            ⛶
+          </button>
         </div>
       ) : null}
 
