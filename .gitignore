@@ -41,6 +41,9 @@ OC_WORKFLOW.md
 .opencode/agents/ds-*.md
 .opencode/agents/oc-*.md
 
+# OpenCode config
+opencode.jsonc
+
 # Legacy agent/workflow files (no longer tracked)
 .opencode/agents/
 AGENTS.md
