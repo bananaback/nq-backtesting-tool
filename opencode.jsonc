@@ -7,7 +7,7 @@
     "DS_WORKFLOW.md"
   ],
   "provider": {
-    "deepseek": {
+    "opencode-go": {
       "models": {
         "deepseek-v4-pro": {
           "options": {
