@@ -327,14 +327,15 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
     const prevPmLow = Math.min(...prevPmCandles.map(c => c.low))
 
     const prevPmStart = findTimeByDayAndClock(candles, prevDay, '13:30')
-    const prevPmEnd = findTimeByDayAndClock(candles, prevDay, '16:00')
 
-    if (prevPmStart && prevPmEnd) {
+    // 75% threshold: 150 expected minutes, need >= 113 candles
+    if (prevPmCandles.length >= Math.ceil(150 * 0.75)) {
+      const startTime = prevPmStart?.time || prevPmCandles[0].time
       // High line
       drawings.push({
         id: id++,
         type: 'PREV_DAY_PM_HIGH',
-        time: prevPmStart.time,
+        time: startTime,
         price: prevPmHigh,
         lengthMinutes: null,
         endTime: timeEleven?.time,
@@ -346,7 +347,7 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
       drawings.push({
         id: id++,
         type: 'PREV_DAY_PM_LOW',
-        time: prevPmStart.time,
+        time: startTime,
         price: prevPmLow,
         lengthMinutes: null,
         endTime: timeEleven?.time,
@@ -364,14 +365,15 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
     const prevAmLow = Math.min(...prevAmCandles.map(c => c.low))
 
     const prevAmStart = findTimeByDayAndClock(candles, prevDayAm, '09:30')
-    const prevAmEnd = findTimeByDayAndClock(candles, prevDayAm, '13:30')
 
-    if (prevAmStart && prevAmEnd) {
+    // 75% threshold: 240 expected minutes, need >= 180 candles
+    if (prevAmCandles.length >= Math.ceil(240 * 0.75)) {
+      const startTime = prevAmStart?.time || prevAmCandles[0].time
       // High line
       drawings.push({
         id: id++,
         type: 'PREV_DAY_AM_HIGH',
-        time: prevAmStart.time,
+        time: startTime,
         price: prevAmHigh,
         lengthMinutes: null,
         endTime: timeEleven?.time,
@@ -383,7 +385,7 @@ function generateAnnotations(candles: Candle[], date: string): Drawing[] {
       drawings.push({
         id: id++,
         type: 'PREV_DAY_AM_LOW',
-        time: prevAmStart.time,
+        time: startTime,
         price: prevAmLow,
         lengthMinutes: null,
         endTime: timeEleven?.time,

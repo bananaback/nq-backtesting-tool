@@ -631,13 +631,15 @@ export function createTradingChartActions({
             const prevPmLow = Math.min(...prevPmCandles.map((c) => c.low))
 
             const prevPmStart = findTimeByDayAndClock(m1Data, prevDay, '13:30')
-            const prevPmEnd = findTimeByDayAndClock(m1Data, prevDay, '16:00')
 
-            if (prevPmStart && prevPmEnd) {
+            // 75% threshold: 150 expected minutes, need >= 113 candles
+            const pmExpected = 150
+            if (prevPmCandles.length >= Math.ceil(pmExpected * 0.75)) {
+                const startTime = prevPmStart?.time ?? prevPmCandles[0].time
                 const endTime = candle1100?.time
                 generated.push({
                     type: 'PREV_DAY_PM_HIGH',
-                    time: prevPmStart.time,
+                    time: startTime,
                     price: prevPmHigh,
                     lengthMinutes: null,
                     endTime,
@@ -647,7 +649,7 @@ export function createTradingChartActions({
 
                 generated.push({
                     type: 'PREV_DAY_PM_LOW',
-                    time: prevPmStart.time,
+                    time: startTime,
                     price: prevPmLow,
                     lengthMinutes: null,
                     endTime,
@@ -665,13 +667,15 @@ export function createTradingChartActions({
             const prevAmLow = Math.min(...prevAmCandles.map((c) => c.low))
 
             const prevAmStart = findTimeByDayAndClock(m1Data, prevDayAm, '09:30')
-            const prevAmEnd = findTimeByDayAndClock(m1Data, prevDayAm, '13:30')
 
-            if (prevAmStart && prevAmEnd) {
+            // 75% threshold: 240 expected minutes, need >= 180 candles
+            const amExpected = 240
+            if (prevAmCandles.length >= Math.ceil(amExpected * 0.75)) {
+                const startTime = prevAmStart?.time ?? prevAmCandles[0].time
                 const endTime = candle1100?.time
                 generated.push({
                     type: 'PREV_DAY_AM_HIGH',
-                    time: prevAmStart.time,
+                    time: startTime,
                     price: prevAmHigh,
                     lengthMinutes: null,
                     endTime,
@@ -681,7 +685,7 @@ export function createTradingChartActions({
 
                 generated.push({
                     type: 'PREV_DAY_AM_LOW',
-                    time: prevAmStart.time,
+                    time: startTime,
                     price: prevAmLow,
                     lengthMinutes: null,
                     endTime,
