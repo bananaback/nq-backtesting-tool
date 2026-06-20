@@ -38,6 +38,7 @@ function ChartStage({ lengthEditorDrawing, onEditDrawing, onCloseLengthEditor, o
                         ref={ctx.yAxisCanvasRef}
                         className="y-axis-canvas"
                         onMouseDown={ctx.handleYAxisMouseDown}
+                        onWheel={ctx.handleYAxisWheel}
                         onDoubleClick={ctx.handleYAxisDoubleClick}
                         aria-label="Y axis"
                     />

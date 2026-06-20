@@ -45,6 +45,7 @@ export interface ChartContextValue {
   handleChartMouseLeave: () => void
   handleYAxisMouseDown: (event: React.MouseEvent<HTMLCanvasElement>) => void
   handleYAxisDoubleClick: () => void
+  handleYAxisWheel: (event: React.WheelEvent<HTMLCanvasElement>) => void
 
   setSelectedDrawingId: Dispatch<SetStateAction<number | null>>
   setLengthEditorDrawingId: Dispatch<SetStateAction<number | null>>
@@ -109,6 +110,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     handleChartMouseLeave,
     handleYAxisMouseDown,
     handleYAxisDoubleClick,
+    handleYAxisWheel,
     selectedDrawingId,
     setSelectedDrawingId,
     lengthEditorDrawingId,
@@ -174,6 +176,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     handleChartMouseLeave,
     handleYAxisMouseDown,
     handleYAxisDoubleClick,
+    handleYAxisWheel,
     setSelectedDrawingId,
     setLengthEditorDrawingId,
     setFibSetupDrawingId,
@@ -200,7 +203,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     toggleDrawMode, toggleDaySeparators,
     setObjectsOpen, loadCsvFiles, removeDrawing, createDrawing,
     handleChartMouseDown, handleChartWheel, handleChartMouseLeave,
-    handleYAxisMouseDown, handleYAxisDoubleClick,
+    handleYAxisMouseDown, handleYAxisDoubleClick, handleYAxisWheel,
     setSelectedDrawingId, setLengthEditorDrawingId, setFibSetupDrawingId,
     cancelFibPlacement, cancelEntryPlacement,
     updateDrawingLengthMinutes, updateFibDrawing,

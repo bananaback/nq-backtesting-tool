@@ -102,6 +102,23 @@ export function createTradingChartActions({
         drawCanvas()
     }
 
+    const handleYAxisWheel = (event: ReactWheelEvent<HTMLCanvasElement>) => {
+        event.preventDefault()
+        if (drawMenuOpenRef.current) return
+
+        const runtime = runtimeRef.current
+        const data = runtime.chartData[currentTfRef.current]
+        if (!data.length) return
+
+        runtime.isAutoScaled = false
+        const scaleFactor = 1 + event.nativeEvent.deltaY * 0.001
+        const center = (runtime.manualMaxP + runtime.manualMinP) / 2
+
+        runtime.manualMaxP = center + (runtime.manualMaxP - center) * scaleFactor
+        runtime.manualMinP = center - (center - runtime.manualMinP) * scaleFactor
+        drawCanvas()
+    }
+
     const changeTimeframe = (nextTF: Timeframe) => {
         const runtime = runtimeRef.current
         const oldTF = currentTfRef.current
@@ -987,5 +1004,6 @@ export function createTradingChartActions({
         handleChartMouseLeave,
         handleYAxisMouseDown,
         handleYAxisDoubleClick,
+        handleYAxisWheel,
     }
 }

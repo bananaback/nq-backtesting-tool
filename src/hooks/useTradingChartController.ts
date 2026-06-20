@@ -36,6 +36,7 @@ type UseTradingChartControllerReturn = {
     handleChartMouseLeave: () => void
     handleYAxisMouseDown: (event: ReactMouseEvent<HTMLCanvasElement>) => void
     handleYAxisDoubleClick: () => void
+    handleYAxisWheel: (event: ReactWheelEvent<HTMLCanvasElement>) => void
     selectedDrawingId: number | null
     setSelectedDrawingId: Dispatch<SetStateAction<number | null>>
     lengthEditorDrawingId: number | null
@@ -190,6 +191,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         handleChartMouseLeave,
         handleYAxisMouseDown,
         handleYAxisDoubleClick,
+        handleYAxisWheel,
         addBacktestSection,
         generateMarketAnnotations,
         prepareDayView,
@@ -453,6 +455,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         handleChartMouseLeave,
         handleYAxisMouseDown,
         handleYAxisDoubleClick,
+        handleYAxisWheel,
         selectedDrawingId,
         setSelectedDrawingId,
         lengthEditorDrawingId,
