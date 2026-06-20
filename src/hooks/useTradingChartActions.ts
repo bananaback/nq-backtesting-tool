@@ -909,24 +909,22 @@ export function createTradingChartActions({
         setDrawings([])
         setSelectedDrawingId && setSelectedDrawingId(null)
 
-        // 2. Find 6:30 and 11:30 candles for m1
+        // 2. Find first and last m1 candle for the date
         const m1Data = runtime.chartData.m1
         if (!m1Data || m1Data.length === 0) {
             window.alert('Load M1 data first.')
             return
         }
 
-        const startCandle = findTimeByDayAndClock(m1Data, dateStr, '06:30')
-        const endCandle = findTimeByDayAndClock(m1Data, dateStr, '11:30')
-        if (!startCandle || !endCandle) {
-            window.alert('M1 data must cover 06:30–11:30 for the selected date.')
-            return
+        let startIdx = -1
+        let endIdx = -1
+        for (let i = 0; i < m1Data.length; i++) {
+            if (m1Data[i].time.slice(0, 10) !== dateStr) continue
+            if (startIdx === -1) startIdx = i
+            endIdx = i
         }
-
-        const startIdx = getIndexByTime(m1Data, startCandle.time)
-        const endIdx = getIndexByTime(m1Data, endCandle.time)
-        if (startIdx === -1 || endIdx === -1) {
-            window.alert('Could not locate 06:30–11:30 range in M1 data.')
+        if (startIdx === -1) {
+            window.alert(`No M1 data found for ${dateStr}.`)
             return
         }
 
@@ -950,7 +948,7 @@ export function createTradingChartActions({
             runtime.viewStart = clamp(index - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
         }
 
-        // 5. Calculate high/low of 6:30-11:30 range for Y scale
+        // 5. Calculate high/low of the day's full range for Y scale
         let rangeHigh = -Infinity
         let rangeLow = Infinity
         for (let i = startIdx; i <= endIdx; i += 1) {
