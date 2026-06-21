@@ -68,6 +68,9 @@ function TopBar({
                     <button type="button" className={ctx.showDaySeparators ? 'action-btn is-on' : 'action-btn'} onClick={ctx.toggleDaySeparators} title={ctx.showDaySeparators ? 'Day Lines: ON' : 'Day Lines: OFF'}>
                         ⋮
                     </button>
+                    <button type="button" className={ctx.showNews ? 'action-btn is-on' : 'action-btn'} onClick={ctx.toggleNews} title={ctx.showNews ? 'News: ON' : 'News: OFF'}>
+                        📰
+                    </button>
                     <button type="button" className={ctx.objectsOpen ? 'action-btn is-on' : 'action-btn'} onClick={() => ctx.setObjectsOpen(v => !v)} title={ctx.objectsOpen ? 'Objects: OPEN' : 'Objects'}>
                         📋
                     </button>

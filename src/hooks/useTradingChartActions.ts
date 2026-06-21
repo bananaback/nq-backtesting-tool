@@ -16,6 +16,7 @@ type TradingChartActionsDeps = {
     setJumpDate: Dispatch<SetStateAction<string>>
     setDrawMode: Dispatch<SetStateAction<boolean>>
     setShowDaySeparators: Dispatch<SetStateAction<boolean>>
+    setShowNews: Dispatch<SetStateAction<boolean>>
     setDrawMenu: Dispatch<SetStateAction<DrawMenuState>>
     setDrawings: Dispatch<SetStateAction<Drawing[]>>
     setSelectedDrawingId?: Dispatch<SetStateAction<number | null>>
@@ -42,6 +43,7 @@ export function createTradingChartActions({
     setJumpDate,
     setDrawMode,
     setShowDaySeparators,
+    setShowNews,
     setDrawMenu,
     setDrawings,
     setSelectedDrawingId,
@@ -395,6 +397,13 @@ export function createTradingChartActions({
         showDaySeparatorsRef.current = next
         runtimeRef.current.showDaySeparators = next
         setShowDaySeparators(next)
+        drawCanvas()
+    }
+
+    const toggleNews = () => {
+        const next = !runtimeRef.current.showNews
+        runtimeRef.current.showNews = next
+        setShowNews(next)
         drawCanvas()
     }
 
@@ -1321,6 +1330,7 @@ export function createTradingChartActions({
         addBacktestSection,
         toggleDrawMode,
         toggleDaySeparators,
+        toggleNews,
         loadCsvFiles,
         removeDrawing,
         createDrawing,

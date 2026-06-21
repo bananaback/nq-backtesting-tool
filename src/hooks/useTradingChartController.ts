@@ -8,6 +8,8 @@ import { drawTradingChart } from '../chartRender'
 import { resizeTradingChart } from '../chartResize'
 import { createTradingChartActions } from './useTradingChartActions'
 import { bindTradingChartWindowEvents } from './useTradingChartWindow'
+import { loadNewsData, generateNewsDrawings } from '../services/marketAnnotationService'
+import { findNewsByDateRange } from '../utils/time'
 
 type UseTradingChartControllerReturn = {
     chartCanvasRef: RefObject<HTMLCanvasElement | null>
@@ -18,6 +20,7 @@ type UseTradingChartControllerReturn = {
     jumpDate: string
     drawMode: boolean
     showDaySeparators: boolean
+    showNews: boolean
     objectsOpen: boolean
     drawMenu: DrawMenuState
     drawings: Drawing[]
@@ -30,6 +33,7 @@ type UseTradingChartControllerReturn = {
     setJumpDate: Dispatch<SetStateAction<string>>
     toggleDrawMode: () => void
     toggleDaySeparators: () => void
+    toggleNews: () => void
     setObjectsOpen: Dispatch<SetStateAction<boolean>>
     loadCsvFiles: (files: FileList | null) => void
     removeDrawing: (id: number) => void
@@ -112,6 +116,9 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         pendingCandleFilterPick: false,
         candleFilterMinute: '',
         renderAfterFilterMinute: true,
+        newsData: [],
+        hoveredNews: null,
+        showNews: true,
     })
 
     const currentTfRef = useRef<Timeframe>('m1')
@@ -125,6 +132,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
     const [jumpDate, setJumpDate] = useState('')
     const [drawMode, setDrawMode] = useState(false)
     const [showDaySeparators, setShowDaySeparators] = useState(true)
+    const [showNews, setShowNews] = useState(true)
     const [objectsOpen, setObjectsOpen] = useState(false)
     const [drawMenu, setDrawMenu] = useState<DrawMenuState>(null)
     const [drawings, setDrawings] = useState<Drawing[]>([])
@@ -191,6 +199,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         jumpToLastCandleOfDate,
         toggleDrawMode,
         toggleDaySeparators,
+        toggleNews,
         loadCsvFiles,
         removeDrawing,
         createDrawing,
@@ -201,7 +210,6 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         handleYAxisDoubleClick,
         handleYAxisWheel,
         addBacktestSection,
-        generateMarketAnnotations,
         prepareDayView,
         exportAllDays,
     } = createTradingChartActions({
@@ -217,6 +225,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         setJumpDate,
         setDrawMode,
         setShowDaySeparators,
+        setShowNews,
         setDrawMenu,
         setDrawings,
         setSelectedDrawingId,
@@ -238,6 +247,15 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
     useEffect(() => {
         drawModeRef.current = drawMode
     }, [drawMode])
+
+    // Load news data on mount
+    useEffect(() => {
+        loadNewsData().then(data => {
+            runtimeRef.current.newsData = data
+        }).catch(err => {
+            console.error('Failed to preload news data:', err)
+        })
+    }, [])
 
     useEffect(() => {
         showDaySeparatorsRef.current = showDaySeparators
@@ -339,8 +357,59 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
     }, [prepareDayView, chartCanvasRef, yAxisCanvasRef, xAxisCanvasRef, runtimeRef, drawCanvas])
 
     const confirmMarketAnnotations = async (dateStr: string) => {
+        const runtime = runtimeRef.current
+        const data = runtime.chartData[currentTfRef.current]
+
+        if (!data.length) {
+            window.alert('Load chart data before adding news annotations.')
+            return
+        }
+
+        // Load news data (cached internally by loadNewsData)
+        const allNews = await loadNewsData()
+        if (!allNews.length) {
+            window.alert('No news data available. Ensure ff_calendar.json is present in the public folder.')
+            return
+        }
+
+        // Store in runtime for future use
+        runtime.newsData = allNews
+
+        // Find news for the selected date using binary search
+        const dateNews = findNewsByDateRange(allNews, dateStr, dateStr)
+        if (!dateNews.length) {
+            window.alert(`No news events found for ${dateStr}.`)
+            return
+        }
+
+        // Generate NewsDrawing objects
+        const newsDrawings = generateNewsDrawings(
+            dateNews,
+            dateStr,
+            data,
+            runtime.drawingIdCounter + 1,
+        )
+
+        if (!newsDrawings.length) {
+            window.alert(`Could not match any news events to candles for ${dateStr}. Try a different timeframe.`)
+            return
+        }
+
+        // Update drawing ID counter
+        runtime.drawingIdCounter += newsDrawings.length
+
+        // Add to drawings array
+        const updatedDrawings = [...runtime.drawings, ...newsDrawings]
+        setDrawings(updatedDrawings)
+
+        // Jump to the first news event's candle
+        const firstNewsCandle = newsDrawings[0]
+        const dataIndex = getIndexByTime(data, firstNewsCandle.time)
+        if (dataIndex >= 0) {
+            runtime.viewStart = Math.max(0, dataIndex - Math.floor(runtime.visibleCount / 3))
+        }
+
         setMktAnnotDialogOpen(false)
-        await generateMarketAnnotations(dateStr)
         drawCanvas()
     }
 
@@ -446,6 +515,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         jumpDate,
         drawMode,
         showDaySeparators,
+        showNews,
         objectsOpen,
         drawMenu,
         drawings,
@@ -458,6 +528,7 @@ export function useTradingChartController(): UseTradingChartControllerReturn {
         setJumpDate,
         toggleDrawMode,
         toggleDaySeparators,
+        toggleNews,
         setObjectsOpen,
         loadCsvFiles,
         removeDrawing,

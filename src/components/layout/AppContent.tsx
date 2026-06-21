@@ -49,6 +49,10 @@ function AppContent() {
           setTfQuickInput(prev => ({ ...prev, value: prev.value + key.toLowerCase() }))
         }
       } else {
+        if (key === 'Escape' && !isTopBarVisible) {
+          setIsTopBarVisible(true)
+          return
+        }
         if (/^[0-9]$/.test(key)) {
           e.preventDefault()
           setTfQuickInput({ visible: true, value: key })
@@ -58,7 +62,7 @@ function AppContent() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [tfQuickInput, ctx.changeTimeframe])
+  }, [tfQuickInput, ctx.changeTimeframe, isTopBarVisible])
 
   const lengthEditorDrawing = ctx.drawings.find((d) => d.id === ctx.lengthEditorDrawingId) ?? null
   const fibSetupDrawing = ctx.drawings.find((d) => d.id === ctx.fibSetupDrawingId) ?? null

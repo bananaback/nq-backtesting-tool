@@ -39,6 +39,9 @@ export function useChartRuntime(): {
         pendingCandleFilterPick: false,
         candleFilterMinute: '',
         renderAfterFilterMinute: true,
+        newsData: [],
+        hoveredNews: null,
+        showNews: true,
     })
 
     const currentTfRef = useRef<Timeframe>('m1')

@@ -56,3 +56,7 @@ AGENTS.md
 PLAN.md
 WORKING_STATE.md
 lite-starter-kit/
+ff_calendar.csv
+ff_calendar.json
+public/ff_calendar.json
+scripts/fetch_ff.py

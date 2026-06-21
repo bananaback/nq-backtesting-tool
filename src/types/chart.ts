@@ -26,6 +26,17 @@ export type Candle = {
     close: number
 }
 
+export type NewsImpact = 'High' | 'Medium' | 'Low' | 'None'
+
+export type NewsEvent = {
+    date: string
+    time: string
+    currency: string
+    impact: NewsImpact
+    event: string
+    sort_key: string
+}
+
 export type FvgDrawing = {
     id: number
     type: 'FVG'
@@ -216,4 +227,7 @@ export type ChartRuntimeState = {
     pendingCandleFilterPick: boolean
     candleFilterMinute: string
     renderAfterFilterMinute: boolean
+    newsData: NewsEvent[]
+    hoveredNews: NewsEvent | null
+    showNews: boolean
 }

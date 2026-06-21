@@ -1,4 +1,5 @@
 import type { Candle, Timeframe } from '../chartTypes'
+import type { NewsEvent } from '../types/chart'
 
 export function getTimeframeMinutes(tf: Timeframe) {
     if (tf === 'm1') return 1
@@ -131,4 +132,39 @@ export function findCandleByTime(data: Candle[], targetTime: string): Candle | n
         else hi = mid - 1
     }
     return null
+}
+
+/** Binary search news events within date range using precomputed sort_key.
+ *  News must be sorted by sort_key ascending (ff_calendar.json is pre-sorted).
+ *  Uses lowerBound pattern to find start index, then collects until sort_key > endDate.
+ *  @param newsData - News events sorted by sort_key.
+ *  @param startDate - Start date in "YYYY-MM-DD" format.
+ *  @param endDate - End date in "YYYY-MM-DD" format (inclusive).
+ *  @returns News events whose sort_key falls within [startDate, endDate]. */
+export function findNewsByDateRange(newsData: NewsEvent[], startDate: string, endDate: string): NewsEvent[] {
+    const results: NewsEvent[] = []
+    if (!newsData.length) return results
+
+    const startKey = startDate + 'T00:00'
+    const endKey = endDate + 'T23:59'
+
+    // Binary search for first news with sort_key >= startKey
+    let lo = 0
+    let hi = newsData.length
+    while (lo < hi) {
+        const mid = (lo + hi) >>> 1
+        if (newsData[mid].sort_key < startKey) {
+            lo = mid + 1
+        } else {
+            hi = mid
+        }
+    }
+
+    // Collect all news up to endKey
+    for (let i = lo; i < newsData.length; i++) {
+        if (newsData[i].sort_key > endKey) break
+        results.push(newsData[i])
+    }
+
+    return results
 }

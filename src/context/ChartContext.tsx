@@ -13,6 +13,7 @@ export interface ChartContextValue {
   jumpDate: string
   drawMode: boolean
   showDaySeparators: boolean
+  showNews: boolean
   objectsOpen: boolean
   drawMenu: DrawMenuState
   drawings: Drawing[]
@@ -38,6 +39,7 @@ export interface ChartContextValue {
   jumpToLastCandleOfDate: (dateStr: string) => void
   toggleDrawMode: () => void
   toggleDaySeparators: () => void
+  toggleNews: () => void
   setObjectsOpen: Dispatch<SetStateAction<boolean>>
   loadCsvFiles: (files: FileList | null) => void
   removeDrawing: (id: number) => void
@@ -96,6 +98,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     jumpDate,
     drawMode,
     showDaySeparators,
+    showNews,
     objectsOpen,
     drawMenu,
     drawings,
@@ -108,6 +111,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     setJumpDate,
     toggleDrawMode,
     toggleDaySeparators,
+    toggleNews,
     setObjectsOpen,
     loadCsvFiles,
     removeDrawing,
@@ -155,6 +159,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     jumpDate,
     drawMode,
     showDaySeparators,
+    showNews,
     objectsOpen,
     drawMenu,
     drawings,
@@ -178,6 +183,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     jumpToLatest,
     toggleDrawMode,
     toggleDaySeparators,
+    toggleNews,
     setObjectsOpen,
     loadCsvFiles,
     removeDrawing,
@@ -205,7 +211,9 @@ export function ChartProvider({ children }: { children: React.ReactNode }): JSX.
     chartLoading,
   }), [
     chartCanvasRef, yAxisCanvasRef, xAxisCanvasRef, chartStageRef,
-    currentTF, jumpDate, drawMode, showDaySeparators, objectsOpen,
+    currentTF, jumpDate, drawMode,     showDaySeparators,
+    showNews,
+    objectsOpen,
     drawMenu, drawings, ohlc, selectedDrawingId,
     lengthEditorDrawingId, fibSetupDrawingId,
     fibPlacementStep, entryPlacementStep,
