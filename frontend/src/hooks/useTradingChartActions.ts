@@ -227,9 +227,11 @@ export function createTradingChartActions({
 
     const jumpToMinute = (minuteStr: string) => {
         const runtime = runtimeRef.current
-        const data = runtime.chartData[currentTfRef.current]
-        if (!data.length) {
-            window.alert('Load chart data first.')
+
+        // Use m1 data for precise minute-level lookup (handles leading-zero mismatch via numeric compare)
+        const m1Data = runtime.chartData.m1
+        if (!m1Data || !m1Data.length) {
+            window.alert('Load M1 chart data first.')
             return
         }
 
@@ -239,30 +241,53 @@ export function createTradingChartActions({
         const dateStr = parts[0]
         const timeStr = parts[1]
 
-        const dateStartIndex = getFirstIndexByDate(data, dateStr)
-        if (dateStartIndex < 0) {
-            window.alert(`No data found for ${dateStr}`)
-            return
-        }
+        // Parse target time to total minutes (parseInt handles "08" vs "8")
+        const targetParts = timeStr.split(':')
+        const targetMinutes = parseInt(targetParts[0], 10) * 60 + parseInt(targetParts[1], 10)
 
-        let index = -1
-        for (let i = dateStartIndex; i < data.length; i += 1) {
-            const t = data[i].time
-            if (!t.startsWith(dateStr)) break
-            if (t.includes(timeStr)) {
-                index = i
-                break
+        // Find exact candle in m1 by comparing minute-of-day numerically
+        let m1Index = -1
+        const m1DateStart = getFirstIndexByDate(m1Data, dateStr)
+        if (m1DateStart >= 0) {
+            for (let i = m1DateStart; i < m1Data.length; i += 1) {
+                const t = m1Data[i].time
+                if (!t.startsWith(dateStr)) break
+                const hhmm = t.includes('T') ? t.split('T')[1].slice(0, 5) : t.slice(11, 16)
+                const [h, m] = hhmm.split(':').map(n => parseInt(n, 10))
+                if (isNaN(h) || isNaN(m)) continue
+                if (h * 60 + m === targetMinutes) {
+                    m1Index = i
+                    break
+                }
             }
         }
 
-        if (index < 0) {
-            index = dateStartIndex
+        // Map to current timeframe
+        const currentData = runtime.chartData[currentTfRef.current]
+        if (!currentData.length) {
+            window.alert('Load chart data first.')
+            return
         }
 
-        const visibleCount = Math.max(10, Math.min(runtime.visibleCount, data.length))
+        let index: number
+        if (m1Index >= 0) {
+            index = getIndexByTime(currentData, m1Data[m1Index].time)
+            if (index < 0) {
+                index = getFirstIndexByDate(currentData, dateStr)
+            }
+        } else {
+            index = getFirstIndexByDate(currentData, dateStr)
+        }
+
+        if (index < 0) {
+            window.alert(`No data found for ${dateStr} on the current timeframe.`)
+            return
+        }
+
+        const visibleCount = Math.max(10, Math.min(runtime.visibleCount, currentData.length))
         runtime.visibleCount = visibleCount
         runtime.viewStart = Math.max(0, index - visibleCount / 2)
-        runtime.viewStart = Math.min(runtime.viewStart, Math.max(data.length - visibleCount, 0))
+        runtime.viewStart = Math.min(runtime.viewStart, Math.max(currentData.length - visibleCount, 0))
         runtime.isAutoScaled = true
         drawCanvas()
     }

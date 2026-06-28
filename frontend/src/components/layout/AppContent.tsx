@@ -4,6 +4,7 @@ import ChartStage from '../chart/ChartStage'
 import MarketAnnotationsDialog from '../modals/MarketAnnotationsDialog'
 import { useEffect, useState, useCallback } from 'react'
 import JumpDateModal from '../modals/JumpDateModal'
+import NewsSearchModal from '../modals/NewsSearchModal'
 
 function AppContent() {
   const ctx = useChartContext()
@@ -11,6 +12,7 @@ function AppContent() {
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false)
   const [sectionCounter, setSectionCounter] = useState(0)
   const [isJumpDateModalOpen, setIsJumpDateModalOpen] = useState(false)
+  const [isNewsSearchModalOpen, setIsNewsSearchModalOpen] = useState(false)
   const [isBacktestMode, setIsBacktestMode] = useState(false)
   const [isAutoAnnotMode, setIsAutoAnnotMode] = useState(false)
   const [prepareDayDialogOpen, setPrepareDayDialogOpen] = useState(false)
@@ -177,6 +179,7 @@ function AppContent() {
           onSubmitSection={handleSectionSubmit}
           sectionDefaultName={sectionDefaultName}
           onHideTopBar={() => setIsTopBarVisible(false)}
+          onOpenNewsSearch={() => setIsNewsSearchModalOpen(true)}
         />
       ) : null}
 
@@ -294,6 +297,17 @@ function AppContent() {
             ctx.setJumpDate(date)
             ctx.jumpToDate(date)
             setIsJumpDateModalOpen(false)
+          }}
+        />
+      ) : null}
+
+      {isNewsSearchModalOpen ? (
+        <NewsSearchModal
+          onClose={() => setIsNewsSearchModalOpen(false)}
+          onJumpToDate={(dateTime) => {
+            ctx.setJumpDate(dateTime.slice(0, 10))
+            ctx.jumpToMinute(dateTime)
+            setIsNewsSearchModalOpen(false)
           }}
         />
       ) : null}

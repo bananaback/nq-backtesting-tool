@@ -638,6 +638,10 @@
   width: min(560px, 100%);
 }
 
+.modal-card--news {
+  width: min(700px, 100%);
+}
+
 .modal-card__header {
   display: flex;
   align-items: flex-start;

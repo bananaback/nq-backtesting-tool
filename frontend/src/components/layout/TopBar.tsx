@@ -14,6 +14,7 @@ type TopBarProps = {
     onSubmitSection: (name: string, date: string, time: string) => Promise<boolean>
     sectionDefaultName: string
     onHideTopBar: () => void
+    onOpenNewsSearch: () => void
 }
 
 function getTimeframeLabel(tf: Timeframe) {
@@ -37,6 +38,7 @@ function TopBar({
     onSubmitSection,
     sectionDefaultName,
     onHideTopBar,
+    onOpenNewsSearch,
 }: TopBarProps): JSX.Element {
     const ctx = useChartContext()
     return (
@@ -62,6 +64,9 @@ function TopBar({
                 </div>
 
                 <div className="toolbar-buttons">
+                    <button type="button" className="action-btn" onClick={onOpenNewsSearch} title="Search News">
+                        🔍
+                    </button>
                     <button type="button" className={ctx.drawMode ? 'action-btn is-on' : 'action-btn'} onClick={ctx.toggleDrawMode} title={ctx.drawMode ? 'Draw: ON' : 'Draw: OFF'}>
                         ✏️
                     </button>
