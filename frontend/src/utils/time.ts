@@ -1,4 +1,4 @@
-import type { Candle, Timeframe } from '../chartTypes'
+import type { Candle, Timeframe } from '../types/chart'
 import type { NewsEvent } from '../types/chart'
 
 export function getTimeframeMinutes(tf: Timeframe) {

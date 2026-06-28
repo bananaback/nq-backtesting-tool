@@ -1,4 +1,4 @@
-import type { Candle } from '../chartTypes'
+import type { Candle } from '../types/chart'
 
 export function parseCsvText(text: string) {
     const lines = text.split('\n')

@@ -1,8 +1,10 @@
 import type { RefObject, Dispatch, SetStateAction } from 'react'
-import type { ChartRuntimeState, Drawing, DrawMenuState, EntryDirection, NewsEvent, Timeframe } from '../chartTypes'
-import { computeEntryStatus, getDefaultFibLevels, getDrawingLengthMinutes, getFibLevelPrice, getIndexByTime, getTimeframeMinutes, snapPriceToCandleOHLC } from '../chartUtils'
+import type { ChartRuntimeState, Drawing, DrawMenuState, EntryDirection, NewsEvent, Timeframe } from '../types/chart'
+import { computeEntryStatus, getDrawingLengthMinutes, getFibLevelPrice, snapPriceToCandleOHLC } from '../utils/drawing'
+import { getDefaultFibLevels } from '../constants/chart'
+import { getIndexByTime, getTimeframeMinutes } from '../utils/time'
 import { findNewsByDateRange, lowerBoundByTime, findCandleByTime } from '../utils/time'
-import { captureChartToImage } from '../chartCapture'
+import { captureChartToImage } from '../engine/capture'
 
 type TradingChartWindowDeps = {
     chartCanvasRef: RefObject<HTMLCanvasElement | null>

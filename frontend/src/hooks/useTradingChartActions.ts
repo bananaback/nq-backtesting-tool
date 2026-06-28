@@ -1,6 +1,9 @@
 import type { Dispatch, RefObject, SetStateAction, MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from 'react'
-import type { Candle, ChartRuntimeState, Drawing, DrawingDraft, DrawMenuState, Timeframe, ToolType } from '../chartTypes'
-import { clamp, findCandleByTime, getDefaultFibLevels, getFirstIndexByDate, getIndexByTime, getPreviousDateString, getPreviousTradingDay, lowerBoundByTime, parseCsvText, roundTimeToTimeframe } from '../chartUtils'
+import type { Candle, ChartRuntimeState, Drawing, DrawingDraft, DrawMenuState, Timeframe, ToolType } from '../types/chart'
+import { clamp } from '../utils/math'
+import { findCandleByTime, getFirstIndexByDate, getIndexByTime, getPreviousDateString, getPreviousTradingDay, lowerBoundByTime, roundTimeToTimeframe } from '../utils/time'
+import { getDefaultFibLevels } from '../constants/chart'
+import { parseCsvText } from '../utils/csv'
 import { createLoadCsvFiles } from './loadTradingChartCsvFiles'
 
 type TradingChartActionsDeps = {
