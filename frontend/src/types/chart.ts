@@ -66,13 +66,3 @@ export function createEmptyChartData(): Record<Timeframe, Candle[]> {
         h1: [],
     }
 }
-
-// Re-export shims — keep old import paths working during transition
-export type { FvgDrawing, VerticalLineDrawing } from './drawings/fvg'
-export type { FibDrawing, FibLevel, FibLineStyle, FibTemplateKey } from './drawings/fib'
-export type { OrgDrawing } from './drawings/org'
-export type { LineDrawing } from './drawings/line'
-export type { ObDrawing } from './drawings/ob'
-export type { EntryDrawing, EntryDirection, EntryStatus, EntryPlacementState } from './drawings/entry'
-export type { Drawing, DrawingDraft } from './drawings/index'
-export type { DrawMenuState, OhlcState, FibPlacementState, ChartRuntimeState } from './state'

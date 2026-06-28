@@ -4,7 +4,8 @@ import FibSetupModal from '../drawing/FibSetupModal'
 import MarketAnnotationsDialog from '../modals/MarketAnnotationsDialog'
 import ObjectsPanel from '../drawing/ObjectsPanel'
 import OhlcBox from './OhlcBox'
-import type { Drawing, FibDrawing } from '../../types/chart'
+import type { Drawing } from '../../types/drawings/index'
+import type { FibDrawing } from '../../types/drawings/fib'
 import { useChartContext } from '../../context/ChartContext'
 
 type ChartStageProps = {

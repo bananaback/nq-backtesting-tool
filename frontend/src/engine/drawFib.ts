@@ -1,4 +1,5 @@
-import type { Candle, ChartRuntimeState, Timeframe } from '../types/chart'
+import type { Candle, Timeframe } from '../types/chart'
+import type { ChartRuntimeState } from '../types/state'
 import { getIndexByTime } from '../utils/time'
 import { getFibLevelPrice, getFibLineDash, snapPriceToCandleOHLC } from '../utils/drawing'
 

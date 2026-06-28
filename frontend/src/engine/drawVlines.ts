@@ -1,4 +1,4 @@
-import type { ChartRuntimeState } from '../types/chart'
+import type { ChartRuntimeState } from '../types/state'
 
 export function drawVline(
     ctx: CanvasRenderingContext2D,

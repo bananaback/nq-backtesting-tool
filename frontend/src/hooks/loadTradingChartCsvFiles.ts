@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
-import type { ChartRuntimeState, Timeframe } from '../types/chart'
+import type { Timeframe } from '../types/chart'
+import type { ChartRuntimeState } from '../types/state'
 import { parseCsvText } from '../utils/csv'
 
 type LoadTradingChartCsvFilesDeps = {

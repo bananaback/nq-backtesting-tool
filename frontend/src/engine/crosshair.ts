@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { ChartRuntimeState, OhlcState } from '../types/chart'
+import type { ChartRuntimeState, OhlcState } from '../types/state'
 import { formatAxisTime } from '../utils/time'
 
 type DrawCrosshairArgs = {

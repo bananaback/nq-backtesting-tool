@@ -1,4 +1,5 @@
-import type { Candle, ChartRuntimeState } from '../types/chart'
+import type { Candle } from '../types/chart'
+import type { ChartRuntimeState } from '../types/state'
 import { findCandleByTime, findNewsByDateRange, getIndexByTime, lowerBoundByTime } from '../utils/time'
 
 export function drawNewsMarkers(

@@ -1,5 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { ChartRuntimeState, EntryDrawing, EntryStatus, OhlcState, Timeframe } from '../types/chart'
+import type { Timeframe } from '../types/chart'
+import type { ChartRuntimeState, OhlcState } from '../types/state'
+import type { EntryDrawing, EntryStatus } from '../types/drawings/entry'
 import { getDrawingLengthMinutes, getFibLevelPrice, getFibLineDash } from '../utils/drawing'
 import { getIndexByTime, getTimeframeMinutes } from '../utils/time'
 import { drawCandles, computeCandleFilter } from './drawCandles'

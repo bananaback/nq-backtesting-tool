@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import type { Drawing } from '../../types/chart'
+import type { Drawing } from '../../types/drawings/index'
 
 type DrawingLengthModalProps = {
     drawing: Drawing

@@ -1,4 +1,5 @@
-import type { Candle, NewsEvent, NewsDrawing } from '../types/chart'
+import type { Candle, NewsEvent } from '../types/chart'
+import type { NewsDrawing } from '../types/drawings/news'
 import { findCandleByTime, getFirstIndexByDate } from '../utils/time'
 
 /** Load and parse ff_calendar.json. Returns sorted NewsEvent array.

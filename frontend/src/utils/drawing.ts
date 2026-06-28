@@ -1,4 +1,6 @@
-import type { Candle, EntryDirection, EntryDrawing, EntryStatus, FibDrawing, FibLineStyle } from '../types/chart'
+import type { Candle } from '../types/chart'
+import type { EntryDirection, EntryDrawing, EntryStatus } from '../types/drawings/entry'
+import type { FibDrawing, FibLineStyle } from '../types/drawings/fib'
 
 export function getFibLevelPrice(drawing: Pick<FibDrawing, 'price1' | 'price2' | 'reverse'>, ratio: number) {
     if (drawing.reverse) {

@@ -1,4 +1,6 @@
-import type { FvgDrawing, ObDrawing, OrgDrawing } from '../types/chart'
+import type { FvgDrawing } from '../types/drawings/fvg'
+import type { ObDrawing } from '../types/drawings/ob'
+import type { OrgDrawing } from '../types/drawings/org'
 import { getDrawingLengthMinutes } from '../utils/drawing'
 
 export function drawFvg(

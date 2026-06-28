@@ -1,5 +1,8 @@
 import { createContext, useContext, type Dispatch, type RefObject, type SetStateAction } from 'react'
-import type { Drawing, DrawMenuState, OhlcState, Timeframe, ToolType, FibDrawing } from '../types/chart'
+import type { Timeframe, ToolType } from '../types/chart'
+import type { DrawMenuState, OhlcState } from '../types/state'
+import type { Drawing } from '../types/drawings/index'
+import type { FibDrawing } from '../types/drawings/fib'
 
 export interface ChartContextValue {
   // ── Canvas refs ────────────────────────────────────────────

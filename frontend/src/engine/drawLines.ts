@@ -1,4 +1,6 @@
-import type { Candle, ChartRuntimeState, LineDrawing } from '../types/chart'
+import type { Candle } from '../types/chart'
+import type { ChartRuntimeState } from '../types/state'
+import type { LineDrawing } from '../types/drawings/line'
 import { getIndexByTime } from '../utils/time'
 import { getDrawingLengthMinutes } from '../utils/drawing'
 

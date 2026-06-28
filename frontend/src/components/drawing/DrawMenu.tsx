@@ -1,4 +1,5 @@
-import { DRAW_TOOL_OPTIONS, type DrawMenuState, type ToolType } from '../../types/chart'
+import { DRAW_TOOL_OPTIONS, type ToolType } from '../../types/chart'
+import type { DrawMenuState } from '../../types/state'
 import { getToolLabel } from '../../constants/chart'
 
 type DrawMenuProps = {

@@ -1,4 +1,5 @@
-import type { FibLevel, FibTemplateKey, Timeframe, ToolType } from '../types/chart'
+import type { Timeframe, ToolType } from '../types/chart'
+import type { FibLevel, FibTemplateKey } from '../types/drawings/fib'
 
 function createFibLevels(ratios: number[]) {
     return ratios.map((ratio) => ({

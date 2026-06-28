@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import type { ChartRuntimeState, OhlcState, Timeframe } from '../types/chart'
+import type { Timeframe } from '../types/chart'
+import type { ChartRuntimeState, OhlcState } from '../types/state'
 import { drawTradingChart } from '../engine/renderer'
 import { resizeTradingChart } from '../engine/resize'
 

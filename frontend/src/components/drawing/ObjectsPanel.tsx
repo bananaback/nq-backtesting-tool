@@ -1,4 +1,4 @@
-import type { Drawing } from '../../types/chart'
+import type { Drawing } from '../../types/drawings/index'
 import { formatObjectTime } from '../../utils/time'
 
 type ObjectsPanelProps = {

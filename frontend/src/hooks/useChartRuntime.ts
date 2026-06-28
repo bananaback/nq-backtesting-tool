@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { RefObject } from 'react'
-import type { ChartRuntimeState, Timeframe } from '../types/chart'
+import type { Timeframe } from '../types/chart'
+import type { ChartRuntimeState } from '../types/state'
 import { createEmptyChartData } from '../types/chart'
 
 export function useChartRuntime(): {

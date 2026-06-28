@@ -1,5 +1,5 @@
 import { useEffect, type RefObject } from 'react'
-import type { ChartRuntimeState } from '../types/chart'
+import type { ChartRuntimeState } from '../types/state'
 
 export function useChartAutomation(
     chartCanvasRef: RefObject<HTMLCanvasElement | null>,
