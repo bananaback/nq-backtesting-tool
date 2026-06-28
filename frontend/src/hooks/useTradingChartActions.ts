@@ -941,77 +941,34 @@ export function createTradingChartActions({
             return
         }
 
-        // 3. Find 6:30 and 11:30 in current TF data for viewport positioning
-        const viewStartCandle = findTimeByDayAndClock(data, dateStr, '06:30')
-        const viewEndCandle = findTimeByDayAndClock(data, dateStr, '11:30')
+        // 3. Find 6:00 and 10:30 in current TF data for viewport positioning
+        const viewStartCandle = findTimeByDayAndClock(data, dateStr, '06:00')
+        const viewEndCandle = findTimeByDayAndClock(data, dateStr, '10:30')
         if (viewStartCandle && viewEndCandle) {
             const viewStartIdx = getIndexByTime(data, viewStartCandle.time)
             const viewEndIdx = getIndexByTime(data, viewEndCandle.time)
             if (viewStartIdx !== -1 && viewEndIdx !== -1) {
-                // Calculate visibleCount to show 6:30-11:30 in current TF
+                // Calculate visibleCount to show 6:00-10:30 in current TF
                 const visibleCount = viewEndIdx - viewStartIdx + 1
                 runtime.visibleCount = clamp(visibleCount, 10, Math.max(data.length, 10))
-                // Set viewStart to center on 6:30
-                runtime.viewStart = clamp(viewStartIdx - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
+                // Set viewStart exactly at 6:00
+                runtime.viewStart = clamp(viewStartIdx, 0, Math.max(data.length - runtime.visibleCount, 0))
             }
         } else {
-            // Fallback: current TF lacks exact 06:30/11:30 candles (e.g., H1+)
+            // Fallback: current TF lacks exact 06:00/10:30 candles
             // Position view at the date's first candle with a reasonable visible window
-            runtime.visibleCount = clamp(20, 10, Math.max(data.length, 10))
-            runtime.viewStart = clamp(index - 5, 0, Math.max(data.length - runtime.visibleCount, 0))
+            runtime.visibleCount = clamp(60, 10, Math.max(data.length, 10))
+            runtime.viewStart = clamp(index - Math.floor(runtime.visibleCount / 4), 0, Math.max(data.length - runtime.visibleCount, 0))
         }
 
-        // 5. Calculate high/low of the day's full range for Y scale
-        let rangeHigh = -Infinity
-        let rangeLow = Infinity
-        for (let i = startIdx; i <= endIdx; i += 1) {
-            if (m1Data[i].high > rangeHigh) rangeHigh = m1Data[i].high
-            if (m1Data[i].low < rangeLow) rangeLow = m1Data[i].low
-        }
+        // 5. Auto-scale Y axis from visible candle range
+        // Renderer computes manualMaxP/manualMinP with 5% padding when isAutoScaled=true
+        runtime.isAutoScaled = true
 
-        // Include London session (02:00-05:00) in Y range so London lines are visible
-        const londonRangeCandles = getCandlesInTimeRange(m1Data, dateStr, '02:00', '05:00')
-        for (const c of londonRangeCandles) {
-            if (c.high > rangeHigh) rangeHigh = c.high
-            if (c.low < rangeLow) rangeLow = c.low
-        }
-
-        // Include Previous Day PM session (13:30-16:00) in Y range
-        const prevDayForScale = getPreviousTradingDay(dateStr)
-        const prevPmRangeCandles = getCandlesInTimeRange(m1Data, prevDayForScale, '13:30', '16:00')
-        for (const c of prevPmRangeCandles) {
-            if (c.high > rangeHigh) rangeHigh = c.high
-            if (c.low < rangeLow) rangeLow = c.low
-        }
-
-        // Include Previous Day AM session (09:30-13:30) in Y range
-        const prevDayAmForScale = getPreviousTradingDay(dateStr)
-        const prevAmRangeCandles = getCandlesInTimeRange(m1Data, prevDayAmForScale, '09:30', '13:30')
-        for (const c of prevAmRangeCandles) {
-            if (c.high > rangeHigh) rangeHigh = c.high
-            if (c.low < rangeLow) rangeLow = c.low
-        }
-
-        // Include open prices (00:00, 08:30, 09:30) in Y range
-        const openScaleClocks = ['00:00', '08:30', '09:30']
-        for (const clock of openScaleClocks) {
-            const candle = findTimeByDayAndClock(m1Data, dateStr, clock)
-            if (candle) {
-                if (candle.open > rangeHigh) rangeHigh = candle.open
-                if (candle.open < rangeLow) rangeLow = candle.open
-            }
-        }
-
-        // 6. Set Y scale with 5% padding
-        const priceRange = rangeHigh - rangeLow
-        runtime.manualMaxP = rangeHigh + priceRange * 0.05
-        runtime.manualMinP = rangeLow - priceRange * 0.05
-        runtime.isAutoScaled = false
-
-        // 7. Generate market annotations
+        // 6. Generate market annotations
         await generateMarketAnnotations(dateStr)
 
-        // 8. Hide top bar
+        // 7. Hide top bar
         if (onHideTopBar) onHideTopBar()
 
         setJumpDate(dateStr)
