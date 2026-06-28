@@ -37,139 +37,6 @@ export type NewsEvent = {
     sort_key: string
 }
 
-export type FvgDrawing = {
-    id: number
-    type: 'FVG'
-    time: string
-    top: number
-    bot: number
-    lengthMinutes?: number | null
-    color: string
-    border: string
-}
-
-export type VerticalLineDrawing = {
-    id: number
-    type: 'VLINE'
-    time: string
-    color: string
-}
-
-export type FibTemplateKey = 'fibo_quadrant' | 'premium_discount' | 'ict_ote' | 'ict_standard_deviation'
-
-export type FibLineStyle = 'normal' | 'dashed' | 'dotted'
-
-export type FibLevel = {
-    ratio: number
-    label: string
-    color: string
-    visible: boolean
-}
-
-export type FibDrawing = {
-    id: number
-    type: 'FIB'
-    time: string
-    time2: string
-    price1: number
-    price2: number
-    templateKey: FibTemplateKey
-    extendRight: boolean
-    reverse: boolean
-    lineStyle: FibLineStyle
-    lineWidth: number
-    levels: FibLevel[]
-}
-
-export type OrgDrawing = {
-    id: number
-    type: 'ORG' | 'NDOG' | 'NWOG'
-    time: string
-    top: number
-    bot: number
-    price1614: number
-    price0930: number
-    lengthMinutes?: number | null
-    fillColor?: string
-    borderColor?: string
-}
-
-export type LineDrawing = {
-    id: number
-    type: 'EQH' | 'EQL' | 'SH' | 'SL' | 'PM_HIGH' | 'PM_LOW' | 'LONDON_HIGH' | 'LONDON_LOW' | 'PREV_DAY_PM_HIGH' | 'PREV_DAY_PM_LOW' | 'PREV_DAY_AM_HIGH' | 'PREV_DAY_AM_LOW' | 'ASIAN_HIGH' | 'ASIAN_LOW' | 'OPEN_0000' | 'OPEN_0830' | 'OPEN_0930' | 'PRE_HIGH' | 'PRE_LOW'
-    time: string
-    price: number
-    lengthMinutes?: number | null
-    endTime?: string
-    breakScanStart?: string
-    color: string
-}
-
-export type ObDrawing = {
-    id: number
-    type: 'OB'
-    time: string
-    top: number
-    bot: number
-    lengthMinutes: number
-    color: string
-}
-
-export type EntryDirection = 'LONG' | 'SHORT'
-
-export type EntryStatus = 'IN_PROGRESS' | 'TP_HIT' | 'SL_HIT'
-
-export type EntryDrawing = {
-    id: number
-    type: 'ENTRY'
-    time: string
-    entryPrice: number
-    stopLossPrice: number
-    takeProfitPrice: number
-    direction: EntryDirection
-    status: EntryStatus
-    widthInCandles: number
-    lengthMinutes: number | null
-}
-
-export type EntryPlacementState = {
-    firstPoint: { time: string; price: number } | null
-    secondPoint: { time: string; price: number } | null
-    thirdPoint: { time: string; price: number } | null
-    fourthPoint: { time: string; price: number } | null
-}
-
-export type Drawing = FvgDrawing | LineDrawing | ObDrawing | OrgDrawing | VerticalLineDrawing | FibDrawing | EntryDrawing
-
-export type DrawingDraft = Omit<FvgDrawing, 'id'> | Omit<LineDrawing, 'id'> | Omit<ObDrawing, 'id'> | Omit<OrgDrawing, 'id'> | Omit<VerticalLineDrawing, 'id'> | Omit<FibDrawing, 'id'> | Omit<EntryDrawing, 'id'>
-
-export type DrawMenuState =
-    | {
-        x: number
-        y: number
-    }
-    | null
-
-export type OhlcState =
-    | {
-        visible: true
-        time: string
-        open: number
-        high: number
-        low: number
-        close: number
-        bullish: boolean
-    }
-    | { visible: false }
-
-export type FibPlacementState = {
-    firstPoint: {
-        time: string
-        price: number
-    } | null
-    templateKey: FibTemplateKey
-}
-
 export const TIMEFRAMES: Timeframe[] = ['m1', 'm5', 'm15', 'h1']
 
 export const DRAW_TOOL_OPTIONS: ToolType[] = [
@@ -200,34 +67,12 @@ export function createEmptyChartData(): Record<Timeframe, Candle[]> {
     }
 }
 
-export type ChartRuntimeState = {
-    chartData: Record<Timeframe, Candle[]>
-    sourceFiles: Partial<Record<Timeframe, File>>
-    showDaySeparators: boolean
-    drawings: Drawing[]
-    drawingIdCounter: number
-    viewStart: number
-    visibleCount: number
-    isAutoScaled: boolean
-    manualMaxP: number
-    manualMinP: number
-    crosshairActive: boolean
-    crosshairX: number
-    crosshairY: number
-    selectedCandleIndex: number | null
-    selectedDrawingId: number | null
-    mouseDownX: number
-    mouseDownY: number
-    isDraggingChart: boolean
-    isDraggingAxis: boolean
-    lastX: number
-    lastY: number
-    pendingFibPlacement: FibPlacementState | null
-    pendingEntryPlacement: EntryPlacementState | null
-    pendingCandleFilterPick: boolean
-    candleFilterMinute: string
-    renderAfterFilterMinute: boolean
-    newsData: NewsEvent[]
-    hoveredNews: NewsEvent | null
-    showNews: boolean
-}
+// Re-export shims — keep old import paths working during transition
+export type { FvgDrawing, VerticalLineDrawing } from './drawings/fvg'
+export type { FibDrawing, FibLevel, FibLineStyle, FibTemplateKey } from './drawings/fib'
+export type { OrgDrawing } from './drawings/org'
+export type { LineDrawing } from './drawings/line'
+export type { ObDrawing } from './drawings/ob'
+export type { EntryDrawing, EntryDirection, EntryStatus, EntryPlacementState } from './drawings/entry'
+export type { Drawing, DrawingDraft } from './drawings/index'
+export type { DrawMenuState, OhlcState, FibPlacementState, ChartRuntimeState } from './state'
