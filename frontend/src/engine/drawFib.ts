@@ -1,6 +1,6 @@
-import type { ChartRuntimeState, Timeframe } from '../types/chart'
+import type { Candle, ChartRuntimeState, Timeframe } from '../types/chart'
 import { getIndexByTime } from '../utils/time'
-import { getFibLevelPrice, getFibLineDash } from '../utils/drawing'
+import { getFibLevelPrice, getFibLineDash, snapPriceToCandleOHLC } from '../utils/drawing'
 
 export type FibRenderLevel = {
     ratio: number
@@ -87,4 +87,82 @@ export function drawFibDrawing(
     }
 
     ctx.restore()
+}
+
+export function drawPendingFib(
+    ctx: CanvasRenderingContext2D,
+    chartCanvas: HTMLCanvasElement,
+    runtime: ChartRuntimeState,
+    data: Candle[],
+    candleSpace: number,
+    priceRange: number,
+    getY: (price: number) => number,
+) {
+    const pendingFib = runtime.pendingFibPlacement
+    if (!pendingFib) return
+
+    ctx.save()
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.8)'
+    ctx.fillStyle = '#0f172a'
+    ctx.setLineDash([5, 4])
+    ctx.lineWidth = 1.5
+
+    if (!pendingFib.firstPoint) {
+        if (runtime.crosshairActive) {
+            const hoverDataIndex = Math.round((runtime.crosshairX - candleSpace / 2) / candleSpace + runtime.viewStart)
+            if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
+                const hoverCandle = data[hoverDataIndex]
+                const cursorPrice = runtime.manualMaxP - (runtime.crosshairY / chartCanvas.height) * priceRange
+                const firstPrice = snapPriceToCandleOHLC(hoverCandle, cursorPrice)
+                const firstX = (hoverDataIndex - runtime.viewStart) * candleSpace + candleSpace / 2
+                const firstY = getY(firstPrice)
+
+                ctx.beginPath()
+                ctx.arc(firstX, firstY, 3.5, 0, Math.PI * 2)
+                ctx.fill()
+            }
+        }
+
+        ctx.setLineDash([])
+        ctx.font = 'bold 11px sans-serif'
+        ctx.fillStyle = '#0f172a'
+        ctx.fillText('Fibonacci: click first anchor or press Esc to cancel', 12, 18)
+        ctx.restore()
+    } else {
+        const firstIndex = getIndexByTime(data, pendingFib.firstPoint.time)
+        if (firstIndex !== -1) {
+            const firstX = (firstIndex - runtime.viewStart) * candleSpace + candleSpace / 2
+            const firstY = getY(pendingFib.firstPoint.price)
+
+            ctx.beginPath()
+            ctx.arc(firstX, firstY, 3.5, 0, Math.PI * 2)
+            ctx.fill()
+
+            if (runtime.crosshairActive) {
+                const hoverDataIndex = Math.round((runtime.crosshairX - candleSpace / 2) / candleSpace + runtime.viewStart)
+                if (hoverDataIndex >= 0 && hoverDataIndex < data.length) {
+                    const hoverCandle = data[hoverDataIndex]
+                    const cursorPrice = runtime.manualMaxP - (runtime.crosshairY / chartCanvas.height) * priceRange
+                    const secondPrice = snapPriceToCandleOHLC(hoverCandle, cursorPrice)
+                    const secondX = (hoverDataIndex - runtime.viewStart) * candleSpace + candleSpace / 2
+                    const secondY = getY(secondPrice)
+
+                    ctx.beginPath()
+                    ctx.moveTo(firstX, firstY)
+                    ctx.lineTo(secondX, secondY)
+                    ctx.stroke()
+
+                    ctx.beginPath()
+                    ctx.arc(secondX, secondY, 3.5, 0, Math.PI * 2)
+                    ctx.fill()
+                }
+            }
+        }
+
+        ctx.setLineDash([])
+        ctx.font = 'bold 11px sans-serif'
+        ctx.fillStyle = '#0f172a'
+        ctx.fillText('Fibonacci: click second anchor or press Esc to cancel', 12, 18)
+        ctx.restore()
+    }
 }
