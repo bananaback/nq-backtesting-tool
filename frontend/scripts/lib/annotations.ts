@@ -5,6 +5,7 @@ import {
   createAsianHighLow,
   createPrevDayPMHighLow,
   createPrevDayAMHighLow,
+  createPrevDayAnd3DayRange,
 } from './annotationSessions'
 import {
   createFibLevels,
@@ -91,6 +92,10 @@ export function generateAnnotations(candles: Candle[], date: string): Drawing[] 
   id = result.nextId
 
   result = createPrevDayAMHighLow(candles, date, id, timeEleven)
+  drawings.push(...result.drawings)
+  id = result.nextId
+
+  result = createPrevDayAnd3DayRange(candles, date, id, lengthTo1100)
   drawings.push(...result.drawings)
   id = result.nextId
 

@@ -183,3 +183,115 @@ export function createPrevDayAMHighLow(
 
   return { drawings, nextId: id }
 }
+
+/** Previous Day Full Range + 3 Previous Day Range (merged when same price) */
+export function createPrevDayAnd3DayRange(
+  candles: Candle[],
+  date: string,
+  idStart: number,
+  lengthTo1100: (startTime: string) => number,
+): { drawings: Drawing[]; nextId: number } {
+  const drawings: Drawing[] = []
+  let id = idStart
+
+  // Collect ALL candles for full 24h day (00:00:00 to 23:59:59) — not a session window
+  const prevDay = getPreviousTradingDay(date)
+  const prevDayCandles = candles.filter(c => c.time.startsWith(prevDay))
+
+  // Compute 3-day candles
+  const threeDayCandles: Candle[] = []
+  let walkDay = date
+  for (let i = 0; i < 3; i++) {
+    walkDay = getPreviousTradingDay(walkDay)
+    threeDayCandles.push(...candles.filter(c => c.time.startsWith(walkDay)))
+  }
+
+  const anchor0700 = findTimeByDayAndClock(candles, date, '07:00')
+  if (anchor0700) {
+    const lenMin = lengthTo1100(anchor0700.time)
+
+    // Compute prev day values (if available)
+    let prevDayHigh: number | null = null
+    let prevDayLow: number | null = null
+    if (prevDayCandles.length > 0) {
+      prevDayHigh = Math.max(...prevDayCandles.map(c => c.high))
+      prevDayLow = Math.min(...prevDayCandles.map(c => c.low))
+    }
+
+    // Compute 3-day values (if available)
+    let threeDayHigh: number | null = null
+    let threeDayLow: number | null = null
+    if (threeDayCandles.length > 0) {
+      threeDayHigh = Math.max(...threeDayCandles.map(c => c.high))
+      threeDayLow = Math.min(...threeDayCandles.map(c => c.low))
+    }
+
+    // Emit high line(s) — merge if same price
+    if (prevDayHigh !== null && threeDayHigh !== null && prevDayHigh === threeDayHigh) {
+      drawings.push({
+        id: id++,
+        type: 'PREV_DAY_3DAY_RANGE_HIGH',
+        time: anchor0700.time,
+        price: prevDayHigh,
+        lengthMinutes: lenMin,
+        color: 'rgba(234, 179, 8, 0.85)',
+      })
+    } else {
+      if (prevDayHigh !== null) {
+        drawings.push({
+          id: id++,
+          type: 'PREV_DAY_RANGE_HIGH',
+          time: anchor0700.time,
+          price: prevDayHigh,
+          lengthMinutes: lenMin,
+          color: 'rgba(234, 179, 8, 0.85)',
+        })
+      }
+      if (threeDayHigh !== null) {
+        drawings.push({
+          id: id++,
+          type: 'PREV_3DAY_RANGE_HIGH',
+          time: anchor0700.time,
+          price: threeDayHigh,
+          lengthMinutes: lenMin,
+          color: 'rgba(249, 115, 22, 0.80)',
+        })
+      }
+    }
+
+    // Emit low line(s) — merge if same price
+    if (prevDayLow !== null && threeDayLow !== null && prevDayLow === threeDayLow) {
+      drawings.push({
+        id: id++,
+        type: 'PREV_DAY_3DAY_RANGE_LOW',
+        time: anchor0700.time,
+        price: prevDayLow,
+        lengthMinutes: lenMin,
+        color: 'rgba(202, 138, 4, 0.85)',
+      })
+    } else {
+      if (prevDayLow !== null) {
+        drawings.push({
+          id: id++,
+          type: 'PREV_DAY_RANGE_LOW',
+          time: anchor0700.time,
+          price: prevDayLow,
+          lengthMinutes: lenMin,
+          color: 'rgba(202, 138, 4, 0.85)',
+        })
+      }
+      if (threeDayLow !== null) {
+        drawings.push({
+          id: id++,
+          type: 'PREV_3DAY_RANGE_LOW',
+          time: anchor0700.time,
+          price: threeDayLow,
+          lengthMinutes: lenMin,
+          color: 'rgba(234, 88, 12, 0.80)',
+        })
+      }
+    }
+  }
+
+  return { drawings, nextId: id }
+}

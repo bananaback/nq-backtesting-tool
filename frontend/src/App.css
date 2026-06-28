@@ -806,30 +806,88 @@
   left: 12px;
   top: 12px;
   z-index: 20;
-  max-width: min(92vw, 760px);
-  padding: 8px 12px;
+  max-width: min(92vw, 560px);
+  padding: 10px 12px;
   border-radius: 0;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: #ffffff;
   color: #0f172a;
   font-size: 0.75rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
-.ohlc-box span {
+/* ── weekday row ── */
+.ohlc-box__weekdays {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.ohlc-box__day {
+  flex: 1;
+  text-align: center;
+  padding: 3px 0;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 2px;
+  background: #f8fafc;
+  letter-spacing: 0.02em;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.ohlc-box__day--active {
+  color: #1e40af;
+  background: #eff6ff;
+  border-color: rgba(59, 130, 246, 0.45);
+  font-weight: 600;
+}
+
+/* ── badge row ── */
+.ohlc-box__badges {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ohlc-box__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 500;
   color: #334155;
+  background: #f1f5f9;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+  line-height: 1.5;
 }
 
-.ohlc-box .bullish {
-  color: #0f766e;
+/* ── OHLC row ── */
+.ohlc-box__ohlc {
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
 }
 
-.ohlc-box .neutral {
-  color: #0f172a;
+.ohlc-box__ohlc span {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.ohlc-box__bullish {
+  color: #0f766e !important;
+}
+
+.ohlc-box__neutral {
+  color: #1e293b !important;
 }
 
 .fib-placement-hint {
@@ -1054,9 +1112,21 @@
   }
 
   .ohlc-box {
-    top: 12px;
-    left: 12px;
+    top: 8px;
+    left: 6px;
+    right: 6px;
     max-width: none;
-    white-space: normal;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .ohlc-box__day {
+    font-size: 0.65rem;
+    padding: 2px 0;
+  }
+
+  .ohlc-box__badge {
+    font-size: 0.65rem;
+    padding: 1px 6px;
   }
 }

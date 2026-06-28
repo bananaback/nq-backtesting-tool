@@ -30,6 +30,47 @@ export function renderDrawings(
       ctx.lineTo(x, chartHeight)
       ctx.stroke()
       ctx.restore()
+    } else if (
+      tool.type === 'PREV_DAY_RANGE_HIGH' ||
+      tool.type === 'PREV_DAY_RANGE_LOW' ||
+      tool.type === 'PREV_3DAY_RANGE_HIGH' ||
+      tool.type === 'PREV_3DAY_RANGE_LOW' ||
+      tool.type === 'PREV_DAY_3DAY_RANGE_HIGH' ||
+      tool.type === 'PREV_DAY_3DAY_RANGE_LOW' ||
+      tool.type === 'LONDON_HIGH' ||
+      tool.type === 'LONDON_LOW' ||
+      tool.type === 'ASIAN_HIGH' ||
+      tool.type === 'ASIAN_LOW'
+    ) {
+      if (tool.price === undefined) continue
+      const y = getY(tool.price)
+
+      let endX: number
+      if (tool.lengthMinutes != null) {
+        const rectWidth = Math.max(1, (tool.lengthMinutes / timeframeMinutes) * candleSpace)
+        endX = x + rectWidth
+      } else {
+        endX = chartWidth
+      }
+
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      ctx.lineTo(endX, y)
+      ctx.strokeStyle = tool.color || '#000000'
+      ctx.lineWidth = 1
+      // Use dashed style for range types to distinguish from session lines
+      if (
+        tool.type === 'PREV_DAY_RANGE_HIGH' ||
+        tool.type === 'PREV_DAY_RANGE_LOW' ||
+        tool.type === 'PREV_3DAY_RANGE_HIGH' ||
+        tool.type === 'PREV_3DAY_RANGE_LOW' ||
+        tool.type === 'PREV_DAY_3DAY_RANGE_HIGH' ||
+        tool.type === 'PREV_DAY_3DAY_RANGE_LOW'
+      ) {
+        ctx.setLineDash([6, 3])
+      }
+      ctx.stroke()
+      ctx.setLineDash([])
     } else if (tool.type === 'PM_HIGH' || tool.type === 'PM_LOW' || tool.type === 'OPEN_0000' || tool.type === 'OPEN_0830' || tool.type === 'OPEN_0930') {
       if (tool.price === undefined) continue
       const y = getY(tool.price)

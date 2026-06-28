@@ -107,4 +107,28 @@ export function drawLineTool(
         ctx.save(); ctx.fillStyle = tool.color; ctx.font = 'bold 10px sans-serif'
         ctx.fillText('Pre L', Math.max(4, x + 4), y - 4); ctx.restore()
     }
+    if (tool.type === 'PREV_DAY_RANGE_HIGH') {
+        ctx.save(); ctx.fillStyle = tool.color; ctx.font = 'bold 10px sans-serif'
+        ctx.fillText('Prev Day Range H', Math.max(4, x + 4), y - 4); ctx.restore()
+    }
+    if (tool.type === 'PREV_DAY_RANGE_LOW') {
+        ctx.save(); ctx.fillStyle = tool.color; ctx.font = 'bold 10px sans-serif'
+        ctx.fillText('Prev Day Range L', Math.max(4, x + 4), y - 4); ctx.restore()
+    }
+    if (tool.type === 'PREV_3DAY_RANGE_HIGH') {
+        ctx.save(); ctx.fillStyle = tool.color; ctx.font = 'bold 10px sans-serif'
+        ctx.fillText('3Day Range H', Math.max(4, x + 4), y - 4); ctx.restore()
+    }
+    if (tool.type === 'PREV_3DAY_RANGE_LOW') {
+        ctx.save(); ctx.fillStyle = tool.color; ctx.font = 'bold 10px sans-serif'
+        ctx.fillText('3Day Range L', Math.max(4, x + 4), y - 4); ctx.restore()
+    }
+    if (tool.type === 'PREV_DAY_3DAY_RANGE_HIGH') {
+        ctx.save(); ctx.fillStyle = tool.color; ctx.font = 'bold 10px sans-serif'
+        ctx.fillText('Prev+3D Range H', Math.max(4, x + 4), y - 4); ctx.restore()
+    }
+    if (tool.type === 'PREV_DAY_3DAY_RANGE_LOW') {
+        ctx.save(); ctx.fillStyle = tool.color; ctx.font = 'bold 10px sans-serif'
+        ctx.fillText('Prev+3D Range L', Math.max(4, x + 4), y - 4); ctx.restore()
+    }
 }
